@@ -117,7 +117,7 @@
       <div class="field">
         <label>Resume <span class="hint">PDF or Word, up to 10MB</span></label>
         <div class="upload-box" id="uploadBox">
-          <strong>Click to upload</strong> or drag and drop your resume
+          <span id="uploadLabel"><strong>Click to upload</strong> or drag and drop your resume</span>
           <input type="file" name="resume" id="resumeInput" accept=".pdf,.doc,.docx" style="display:none">
         </div>
       </div>
@@ -145,7 +145,8 @@
   resumeInput.addEventListener('change', () => {
     if (resumeInput.files.length) {
       uploadBox.classList.add('has-file');
-      uploadBox.innerHTML = '<strong>' + resumeInput.files[0].name + '</strong> selected — click to change';
+      document.getElementById('uploadLabel').innerHTML =
+        '<strong>' + resumeInput.files[0].name + '</strong> selected — click to change';
     }
   });
 
