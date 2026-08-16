@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Apply — Kytez Recruitment</title>
+<style>
+  :root {
+    --brand: #16493A;
+    --brand-light: #e6efec;
+    --surface-1: #fcfcfb;
+    --page-plane: #f5f6f5;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted: #898781;
+    --baseline: #c3c2b7;
+    --border: rgba(11,11,11,0.10);
+    --status-critical: #d03b3b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--page-plane); color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 48px 20px 80px; }
+  .brand-row { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+  .brand-mark {
+    width: 42px; height: 42px; border-radius: 10px; background: var(--brand);
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 17px;
+  }
+  .brand-name { font-weight: 700; font-size: 17px; }
+  .brand-sub { font-size: 12px; color: var(--text-muted); }
+  .card {
+    background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: 16px; padding: 32px;
+  }
+  .card h1 { font-size: 22px; margin: 0 0 6px; }
+  .card p.lead { color: var(--text-secondary); font-size: 14px; margin: 0 0 24px; }
+  .field { margin-bottom: 18px; }
+  .field label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  .field .hint { font-size: 12px; color: var(--text-muted); font-weight: 400; }
+  input[type=text], input[type=email], input[type=tel], select, textarea {
+    width: 100%; padding: 10px 12px; font-size: 14px;
+    border: 1px solid var(--baseline); border-radius: 8px;
+    font-family: inherit; background: var(--surface-1); color: var(--text-primary);
+  }
+  textarea { resize: vertical; min-height: 90px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .upload-box {
+    border: 1.5px dashed var(--baseline); border-radius: 10px; padding: 18px;
+    text-align: center; color: var(--text-secondary); font-size: 13px;
+    background: var(--page-plane); cursor: pointer;
+  }
+  .upload-box strong { color: var(--brand); }
+  .upload-box.has-file { border-style: solid; border-color: var(--brand); }
+  .submit-btn {
+    width: 100%; padding: 13px; margin-top: 6px; background: var(--brand);
+    color: #fff; border: none; border-radius: 9px; font-size: 14px;
+    font-weight: 700; cursor: pointer; font-family: inherit;
+  }
+  .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+  .privacy-note { text-align: center; font-size: 11px; color: var(--text-muted); margin-top: 14px; line-height: 1.5; }
+  .msg { font-size: 13px; margin-top: 14px; padding: 10px 12px; border-radius: 8px; display: none; }
+  .msg.error { background: #fbeaea; color: var(--status-critical); display: block; }
+  .success-card { text-align: center; padding: 60px 32px; }
+  .success-card .check {
+    width: 56px; height: 56px; border-radius: 50%; background: var(--brand-light);
+    color: var(--brand); display: flex; align-items: center; justify-content: center;
+    font-size: 28px; margin: 0 auto 18px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand-row">
+    <div class="brand-mark">K</div>
+    <div>
+      <div class="brand-name">Kytez Recruitment</div>
+      <div class="brand-sub">The right talent, every time</div>
+    </div>
+  </div>
+
+  <div class="card" id="formCard">
+    <h1>Apply for a role</h1>
+    <p class="lead">Tell us a bit about yourself and we'll be in touch.</p>
+
+    <form id="applyForm">
+      <div class="field">
+        <label>Full name</label>
+        <input type="text" name="name" required>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>Email</label>
+          <input type="email" name="email" required>
+        </div>
+        <div class="field">
+          <label>Phone</label>
+          <input type="tel" name="phone">
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>Sector</label>
+          <select name="sector">
+            <option value="Hospitality">Hospitality</option>
+            <option value="Trades & Industrial">Trades &amp; Industrial</option>
+            <option value="Office & Professional">Office &amp; Professional</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Role you're applying for</label>
+          <input type="text" name="position" placeholder="e.g. Bar Attendant" required>
+        </div>
+      </div>
+      <div class="field">
+        <label>Resume <span class="hint">PDF or Word, up to 10MB</span></label>
+        <div class="upload-box" id="uploadBox">
+          <strong>Click to upload</strong> or drag and drop your resume
+          <input type="file" name="resume" id="resumeInput" accept=".pdf,.doc,.docx" style="display:none">
+        </div>
+      </div>
+      <div class="field">
+        <label>Anything else you'd like us to know? <span class="hint">optional</span></label>
+        <textarea name="cover_letter" placeholder="Availability, experience, questions..."></textarea>
+      </div>
+      <button type="submit" class="submit-btn" id="submitBtn">Submit Application</button>
+      <div class="msg error" id="errorMsg"></div>
+      <div class="privacy-note">Your information is submitted securely and is only visible to Kytez Recruitment staff.</div>
+    </form>
+  </div>
+
+  <div class="card success-card" id="successCard" style="display:none">
+    <div class="check">&#10003;</div>
+    <h1>Application received</h1>
+    <p class="lead">Thanks for applying — our team will review your application and get in touch if there's a match.</p>
+  </div>
+</div>
+
+<script>
+  const uploadBox = document.getElementById('uploadBox');
+  const resumeInput = document.getElementById('resumeInput');
+  uploadBox.addEventListener('click', () => resumeInput.click());
+  resumeInput.addEventListener('change', () => {
+    if (resumeInput.files.length) {
+      uploadBox.classList.add('has-file');
+      uploadBox.innerHTML = '<strong>' + resumeInput.files[0].name + '</strong> selected — click to change';
+    }
+  });
+
+  const form = document.getElementById('applyForm');
+  const errorMsg = document.getElementById('errorMsg');
+  const submitBtn = document.getElementById('submitBtn');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    errorMsg.style.display = 'none';
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Submitting...';
+    try {
+      const res = await fetch('/api/apply', { method: 'POST', body: new FormData(form) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Something went wrong.');
+      document.getElementById('formCard').style.display = 'none';
+      document.getElementById('successCard').style.display = 'block';
+    } catch (err) {
+      errorMsg.textContent = err.message;
+      errorMsg.style.display = 'block';
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Submit Application';
+    }
+  });
+</script>
+</body>
+</html>

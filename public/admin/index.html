@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kytez ATS — Admin</title>
+<style>
+  :root {
+    --brand: #16493A;
+    --brand-light: #e6efec;
+    --surface-1: #fcfcfb;
+    --page-plane: #f5f6f5;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted: #898781;
+    --border: rgba(11,11,11,0.10);
+    --baseline: #c3c2b7;
+
+    --series-1: #2a78d6;
+    --series-4: #eda100;
+    --series-2: #eb6834;
+    --series-7: #4a3aa7;
+    --status-good: #0ca30c;
+    --status-critical: #d03b3b;
+    --seq-100: #cde2fb;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page-plane); color: var(--text-primary); font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .hidden { display: none !important; }
+
+  /* ---- login ---- */
+  #loginView { max-width: 380px; margin: 90px auto; padding: 0 20px; }
+  .brand-row { display: flex; align-items: center; gap: 10px; margin-bottom: 24px; justify-content: center; }
+  .brand-mark { width: 38px; height: 38px; border-radius: 9px; background: var(--brand); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+  .brand-name { font-weight: 700; font-size: 15px; }
+  .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 16px; padding: 28px; }
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  input, select, textarea { width: 100%; padding: 10px 12px; font-size: 14px; border: 1px solid var(--baseline); border-radius: 8px; font-family: inherit; background: #fff; color: var(--text-primary); }
+  textarea { resize: vertical; min-height: 70px; }
+  .btn { padding: 11px 16px; border: none; border-radius: 9px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; }
+  .btn-primary { background: var(--brand); color: #fff; width: 100%; }
+  .btn-secondary { background: var(--page-plane); color: var(--text-primary); border: 1px solid var(--border); }
+  .err { font-size: 13px; color: var(--status-critical); background: #fbeaea; padding: 9px 12px; border-radius: 8px; margin-bottom: 14px; display: none; }
+
+  /* ---- dashboard ---- */
+  .admin-header { background: var(--surface-1); border-bottom: 1px solid var(--border); padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  .admin-header .left { display: flex; align-items: center; gap: 10px; }
+  .admin-title { font-size: 16px; font-weight: 700; }
+  .lock-badge { font-size: 11px; font-weight: 700; color: var(--status-good); background: #e8f7e8; border: 1px solid rgba(12,163,12,0.25); padding: 4px 9px; border-radius: 999px; }
+  .admin-user { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-secondary); }
+  .avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--series-7); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; }
+  .link-btn { background: none; border: none; color: var(--text-muted); font-size: 12px; cursor: pointer; text-decoration: underline; font-family: inherit; }
+
+  .admin-body { max-width: 1280px; margin: 0 auto; padding: 24px; }
+  .stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 26px; }
+  .stat-tile { background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; }
+  .stat-tile .label { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+  .stat-tile .value { font-size: 26px; font-weight: 700; margin-top: 4px; }
+
+  .board-title { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
+  .board-sub { font-size: 12px; color: var(--text-muted); margin-bottom: 14px; }
+  .board { display: grid; grid-template-columns: repeat(6, minmax(190px, 1fr)); gap: 12px; overflow-x: auto; }
+  .col { background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px; padding: 12px; min-height: 160px; }
+  .col-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; padding: 0 2px; }
+  .col-head .name { font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .col-head .count { font-size: 11px; font-weight: 700; color: var(--text-muted); background: var(--page-plane); padding: 2px 8px; border-radius: 999px; }
+  .card-item { background: var(--page-plane); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; cursor: pointer; }
+  .card-item:hover { border-color: var(--brand); }
+  .card-item .cname { font-size: 13px; font-weight: 700; }
+  .card-item .crole { font-size: 11.5px; color: var(--text-secondary); margin-top: 2px; }
+  .card-item .cdate { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+  .empty-col { font-size: 11.5px; color: var(--text-muted); text-align: center; padding: 20px 0; }
+
+  /* ---- modal ---- */
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 100; }
+  .modal { background: var(--surface-1); border-radius: 16px; padding: 28px; max-width: 480px; width: 100%; max-height: 88vh; overflow-y: auto; }
+  .modal h2 { margin: 0 0 2px; font-size: 18px; }
+  .modal .sub { font-size: 12.5px; color: var(--text-muted); margin-bottom: 18px; }
+  .modal .row { display: flex; justify-content: space-between; font-size: 13px; padding: 7px 0; border-bottom: 1px solid var(--border); }
+  .modal .row .k { color: var(--text-muted); }
+  .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
+  .modal-actions .btn { flex: 1; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginView">
+  <div class="brand-row">
+    <div class="brand-mark">K</div>
+    <div class="brand-name">Kytez Recruitment — Admin</div>
+  </div>
+  <div class="card">
+    <div class="err" id="loginErr"></div>
+    <form id="loginForm">
+      <div class="field"><label>Email</label><input type="email" name="email" required></div>
+      <div class="field"><label>Password</label><input type="password" name="password" required></div>
+      <button class="btn btn-primary" type="submit">Sign in</button>
+    </form>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashView" class="hidden">
+  <div class="admin-header">
+    <div class="left">
+      <div class="admin-title">Kytez Recruitment — Hiring Dashboard</div>
+      <span class="lock-badge">🔒 Private, staff only</span>
+    </div>
+    <div class="admin-user">
+      <div class="avatar" id="avatarInit">·</div>
+      <span id="userLabel"></span>
+      <button class="link-btn" id="teamBtn">Team</button>
+      <button class="link-btn" id="logoutBtn">Sign out</button>
+    </div>
+  </div>
+
+  <div class="admin-body">
+    <div class="stat-row">
+      <div class="stat-tile"><div class="label">Total candidates</div><div class="value" id="statTotal">–</div></div>
+      <div class="stat-tile"><div class="label">New this week</div><div class="value" id="statNew">–</div></div>
+      <div class="stat-tile"><div class="label">In interview</div><div class="value" id="statInterview">–</div></div>
+      <div class="stat-tile"><div class="label">Hired this month</div><div class="value" id="statHired">–</div></div>
+    </div>
+
+    <div class="board-title">Candidate pipeline</div>
+    <div class="board-sub">Click a candidate to view details, download their resume, or move them to the next stage.</div>
+    <div class="board" id="board"></div>
+  </div>
+</div>
+
+<!-- TEAM MODAL -->
+<div class="modal-backdrop hidden" id="teamBackdrop">
+  <div class="modal">
+    <h2>Team access</h2>
+    <div class="sub">Everyone listed here can sign in and see all candidates.</div>
+    <div id="teamList"></div>
+    <div class="field" style="margin-top:16px"><label>Add a teammate</label></div>
+    <form id="teamForm">
+      <div class="field"><input type="text" name="name" placeholder="Name" required></div>
+      <div class="field"><input type="email" name="email" placeholder="Email" required></div>
+      <div class="field"><input type="password" name="password" placeholder="Temporary password (min 8 characters)" required minlength="8"></div>
+      <div class="err" id="teamErr"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="teamClose">Close</button>
+        <button type="submit" class="btn btn-primary">Add teammate</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-backdrop hidden" id="modalBackdrop">
+  <div class="modal">
+    <h2 id="mName"></h2>
+    <div class="sub" id="mRole"></div>
+    <div class="row"><span class="k">Email</span><span id="mEmail"></span></div>
+    <div class="row"><span class="k">Phone</span><span id="mPhone"></span></div>
+    <div class="row"><span class="k">Applied</span><span id="mDate"></span></div>
+    <div class="row"><span class="k">Resume</span><span id="mResume"></span></div>
+    <div class="field" style="margin-top:14px"><label>Stage</label>
+      <select id="mStage">
+        <option value="applied">Applied</option>
+        <option value="screening">Screening</option>
+        <option value="interview">Interview</option>
+        <option value="offer">Offer</option>
+        <option value="hired">Hired</option>
+        <option value="rejected">Rejected</option>
+      </select>
+    </div>
+    <div class="field"><label>Cover note</label><div class="sub" id="mCover" style="white-space:pre-wrap"></div></div>
+    <div class="field"><label>Internal notes</label><textarea id="mNotes" placeholder="Add private notes about this candidate..."></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="mClose">Close</button>
+      <button class="btn btn-primary" id="mSave">Save changes</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STAGES = [
+  { key: 'applied', label: 'Applied', color: 'var(--series-1)' },
+  { key: 'screening', label: 'Screening', color: 'var(--series-4)' },
+  { key: 'interview', label: 'Interview', color: 'var(--series-2)' },
+  { key: 'offer', label: 'Offer', color: 'var(--series-7)' },
+  { key: 'hired', label: 'Hired', color: 'var(--status-good)' },
+  { key: 'rejected', label: 'Rejected', color: 'var(--status-critical)' },
+];
+
+let candidates = [];
+
+async function checkAuth() {
+  const res = await fetch('/api/me');
+  const data = await res.json();
+  if (data.authenticated) {
+    document.getElementById('loginView').classList.add('hidden');
+    document.getElementById('dashView').classList.remove('hidden');
+    document.getElementById('userLabel').textContent = data.user.name + ' · ' + data.user.email;
+    document.getElementById('avatarInit').textContent = data.user.name.slice(0,2).toUpperCase();
+    loadDashboard();
+  } else {
+    document.getElementById('loginView').classList.remove('hidden');
+    document.getElementById('dashView').classList.add('hidden');
+  }
+}
+
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const errEl = document.getElementById('loginErr');
+  errEl.style.display = 'none';
+  const res = await fetch('/api/login', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ email: fd.get('email'), password: fd.get('password') })
+  });
+  const data = await res.json();
+  if (!res.ok) { errEl.textContent = data.error; errEl.style.display = 'block'; return; }
+  checkAuth();
+});
+
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+  await fetch('/api/logout', { method: 'POST' });
+  checkAuth();
+});
+
+async function loadDashboard() {
+  const [statsRes, candRes] = await Promise.all([fetch('/api/stats'), fetch('/api/candidates')]);
+  const stats = await statsRes.json();
+  const candData = await candRes.json();
+  candidates = candData.candidates;
+
+  document.getElementById('statTotal').textContent = stats.total;
+  document.getElementById('statNew').textContent = stats.newThisWeek;
+  document.getElementById('statInterview').textContent = (stats.byStage.interview || 0);
+  document.getElementById('statHired').textContent = stats.hiredThisMonth;
+
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+  STAGES.forEach(stage => {
+    const items = candidates.filter(c => c.stage === stage.key);
+    const col = document.createElement('div');
+    col.className = 'col';
+    col.innerHTML = `<div class="col-head">
+        <span class="name"><span class="dot" style="background:${stage.color}"></span>${stage.label}</span>
+        <span class="count">${items.length}</span>
+      </div>` + (items.length ? '' : '<div class="empty-col">No candidates</div>');
+    items.forEach(c => {
+      const el = document.createElement('div');
+      el.className = 'card-item';
+      el.innerHTML = `<div class="cname">${escapeHtml(c.name)}</div>
+        <div class="crole">${escapeHtml(c.position)}</div>
+        <div class="cdate">${timeAgo(c.created_at)}</div>`;
+      el.addEventListener('click', () => openModal(c.id));
+      col.appendChild(el);
+    });
+    board.appendChild(col);
+  });
+}
+
+function escapeHtml(s) { return (s||'').replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
+function timeAgo(dateStr) {
+  const d = new Date(dateStr);
+  const diffH = Math.round((Date.now() - d.getTime()) / 3600000);
+  if (diffH < 1) return 'Just now';
+  if (diffH < 24) return diffH + 'h ago';
+  const diffD = Math.round(diffH / 24);
+  if (diffD < 7) return diffD + 'd ago';
+  return d.toLocaleDateString();
+}
+
+let currentId = null;
+function openModal(id) {
+  const c = candidates.find(x => x.id === id);
+  currentId = id;
+  document.getElementById('mName').textContent = c.name;
+  document.getElementById('mRole').textContent = (c.sector ? c.sector + ' · ' : '') + c.position;
+  document.getElementById('mEmail').textContent = c.email;
+  document.getElementById('mPhone').textContent = c.phone || '—';
+  document.getElementById('mDate').textContent = new Date(c.created_at).toLocaleString();
+  document.getElementById('mResume').innerHTML = c.resume_filename
+    ? `<a href="/api/candidates/${c.id}/resume" target="_blank">${escapeHtml(c.resume_filename)}</a>` : '—';
+  document.getElementById('mStage').value = c.stage;
+  document.getElementById('mCover').textContent = c.cover_letter || '—';
+  document.getElementById('mNotes').value = c.notes || '';
+  document.getElementById('modalBackdrop').classList.remove('hidden');
+}
+document.getElementById('mClose').addEventListener('click', () => document.getElementById('modalBackdrop').classList.add('hidden'));
+document.getElementById('mSave').addEventListener('click', async () => {
+  const stage = document.getElementById('mStage').value;
+  const notes = document.getElementById('mNotes').value;
+  await fetch('/api/candidates/' + currentId, {
+    method: 'PATCH', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ stage, notes })
+  });
+  document.getElementById('modalBackdrop').classList.add('hidden');
+  loadDashboard();
+});
+
+document.getElementById('teamBtn').addEventListener('click', async () => {
+  document.getElementById('teamErr').style.display = 'none';
+  document.getElementById('teamForm').reset();
+  const res = await fetch('/api/admins');
+  const data = await res.json();
+  document.getElementById('teamList').innerHTML = data.admins.map(a =>
+    `<div class="row"><span>${escapeHtml(a.name)}</span><span class="k">${escapeHtml(a.email)}</span></div>`
+  ).join('');
+  document.getElementById('teamBackdrop').classList.remove('hidden');
+});
+document.getElementById('teamClose').addEventListener('click', () => document.getElementById('teamBackdrop').classList.add('hidden'));
+document.getElementById('teamForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const errEl = document.getElementById('teamErr');
+  errEl.style.display = 'none';
+  const res = await fetch('/api/admins', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ name: fd.get('name'), email: fd.get('email'), password: fd.get('password') })
+  });
+  const data = await res.json();
+  if (!res.ok) { errEl.textContent = data.error; errEl.style.display = 'block'; return; }
+  document.getElementById('teamBtn').click();
+});
+
+checkAuth();
+</script>
+</body>
+</html>
