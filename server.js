@@ -47,6 +47,15 @@ app.use('/assets', express.static(path.join(__dirname, 'public/assets')));
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public/apply.html')));
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public/admin/index.html')));
 
+// public: list of currently open postings, shown in the Openings tab of the apply page
+app.get('/api/postings/open', async (req, res) => {
+  const { rows } = await pool.query(
+    `SELECT id, title, sector, location, employment_type, description
+     FROM job_postings WHERE status = 'open' ORDER BY created_at DESC`
+  );
+  res.json({ postings: rows });
+});
+
 // ---------- public API ----------
 function handleUpload(req, res, next) {
   upload.single('resume')(req, res, (err) => {
@@ -57,16 +66,37 @@ function handleUpload(req, res, next) {
 
 app.post('/api/apply', handleUpload, async (req, res) => {
   try {
-    const { name, email, phone, sector, position, cover_letter } = req.body;
-    if (!name || !email || !position) {
+    const { name, email, phone, sector, position, posting_id, cover_letter } = req.body;
+
+    let finalPosition = position;
+    let finalSector = sector;
+    let postingId = null;
+
+    // If the applicant picked a real job posting, snapshot its title/sector rather than
+    // trusting free-text from the client, and remember which posting it was.
+    if (posting_id) {
+      const { rows } = await pool.query(
+        `SELECT id, title, sector FROM job_postings WHERE id = $1 AND status = 'open'`,
+        [posting_id]
+      );
+      const posting = rows[0];
+      if (!posting) {
+        return res.status(400).json({ error: 'That job posting is no longer open. Please refresh and try again.' });
+      }
+      finalPosition = posting.title;
+      finalSector = posting.sector || sector;
+      postingId = posting.id;
+    }
+
+    if (!name || !email || !finalPosition) {
       return res.status(400).json({ error: 'Name, email, and position are required.' });
     }
     const file = req.file;
     await pool.query(
       `INSERT INTO candidates
-        (name, email, phone, sector, position, cover_letter, resume_filename, resume_mimetype, resume_data)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-      [name, email, phone || null, sector || null, position, cover_letter || null,
+        (name, email, phone, sector, position, posting_id, cover_letter, resume_filename, resume_mimetype, resume_data)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+      [name, email, phone || null, finalSector || null, finalPosition, postingId, cover_letter || null,
        file ? file.originalname : null, file ? file.mimetype : null, file ? file.buffer : null]
     );
     res.json({ ok: true });
@@ -146,14 +176,64 @@ app.post('/api/admins', requireAuth, async (req, res) => {
 
 // ---------- protected admin API ----------
 const STAGES = ['applied', 'screening', 'interview', 'offer', 'hired', 'rejected'];
+const POSTING_STATUSES = ['draft', 'open', 'closed'];
 
 app.get('/api/candidates', requireAuth, async (req, res) => {
   const { rows } = await pool.query(
-    `SELECT id, name, email, phone, sector, position, cover_letter, stage, notes,
+    `SELECT id, name, email, phone, sector, position, posting_id, cover_letter, stage, notes,
             resume_filename, created_at, updated_at
      FROM candidates ORDER BY created_at DESC`
   );
   res.json({ candidates: rows });
+});
+
+// job postings — the roles candidates can pick from in the Openings tab of the apply page
+app.get('/api/postings', requireAuth, async (req, res) => {
+  const { rows } = await pool.query(
+    `SELECT p.id, p.title, p.sector, p.location, p.employment_type, p.description,
+            p.status, p.created_at, p.updated_at,
+            COUNT(c.id)::int AS applicant_count
+     FROM job_postings p
+     LEFT JOIN candidates c ON c.posting_id = p.id
+     GROUP BY p.id
+     ORDER BY p.created_at DESC`
+  );
+  res.json({ postings: rows });
+});
+
+app.post('/api/postings', requireAuth, async (req, res) => {
+  const { title, sector, location, employment_type, description, status } = req.body;
+  if (!title) return res.status(400).json({ error: 'Title is required.' });
+  const finalStatus = POSTING_STATUSES.includes(status) ? status : 'open';
+  const { rows } = await pool.query(
+    `INSERT INTO job_postings (title, sector, location, employment_type, description, status)
+     VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
+    [title, sector || null, location || null, employment_type || null, description || null, finalStatus]
+  );
+  res.json({ ok: true, id: rows[0].id });
+});
+
+app.patch('/api/postings/:id', requireAuth, async (req, res) => {
+  const { id } = req.params;
+  const { title, sector, location, employment_type, description, status } = req.body;
+  if (status !== undefined && !POSTING_STATUSES.includes(status)) {
+    return res.status(400).json({ error: 'Invalid status.' });
+  }
+  const fields = [];
+  const values = [];
+  let i = 1;
+  const set = (col, val) => { fields.push(`${col} = $${i++}`); values.push(val); };
+  if (title !== undefined) set('title', title);
+  if (sector !== undefined) set('sector', sector);
+  if (location !== undefined) set('location', location);
+  if (employment_type !== undefined) set('employment_type', employment_type);
+  if (description !== undefined) set('description', description);
+  if (status !== undefined) set('status', status);
+  if (!fields.length) return res.json({ ok: true });
+  fields.push('updated_at = now()');
+  values.push(id);
+  await pool.query(`UPDATE job_postings SET ${fields.join(', ')} WHERE id = $${i}`, values);
+  res.json({ ok: true });
 });
 
 app.patch('/api/candidates/:id', requireAuth, async (req, res) => {
