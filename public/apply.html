@@ -31,12 +31,64 @@
   }
   .brand-name { font-weight: 700; font-size: 17px; }
   .brand-sub { font-size: 12px; color: var(--text-muted); }
+
+  /* ---- tabs ---- */
+  .tab-nav {
+    display: flex; gap: 6px; background: var(--brand-light);
+    border-radius: 12px; padding: 5px; margin-bottom: 24px;
+  }
+  .tab-btn {
+    flex: 1; padding: 10px 14px; border: none; border-radius: 8px;
+    background: transparent; color: var(--brand); font-weight: 700;
+    font-size: 13.5px; font-family: inherit; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+  }
+  .tab-btn.active { background: var(--brand); color: #fff; }
+  .tab-count {
+    font-size: 11px; font-weight: 700; background: rgba(255,255,255,0.35);
+    color: inherit; border-radius: 999px; padding: 1px 7px; min-width: 18px; text-align: center;
+  }
+  .tab-btn.active .tab-count { background: rgba(255,255,255,0.25); }
+  .tab-btn:not(.active) .tab-count { background: #fff; color: var(--brand); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
   .card {
     background: var(--surface-1); border: 1px solid var(--border);
     border-radius: 16px; padding: 32px;
   }
   .card h1 { font-size: 22px; margin: 0 0 6px; }
   .card p.lead { color: var(--text-secondary); font-size: 14px; margin: 0 0 24px; }
+
+  /* ---- openings tab ---- */
+  #openingsHeading { font-size: 22px; margin: 0 0 6px; }
+  #openingsLead { color: var(--text-secondary); font-size: 14px; margin: 0 0 20px; }
+  .job-card {
+    background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: 14px; padding: 18px 20px; margin-bottom: 12px;
+  }
+  .job-card h3 { font-size: 15.5px; margin: 0 0 6px; }
+  .job-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  .job-meta span {
+    font-size: 11px; font-weight: 600; color: var(--brand);
+    background: var(--brand-light); padding: 3px 9px; border-radius: 999px;
+  }
+  .job-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.55; white-space: pre-wrap; margin-bottom: 14px; }
+  .job-apply-btn {
+    padding: 8px 16px; background: var(--brand); color: #fff; border: none;
+    border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit;
+  }
+  .empty-state {
+    text-align: center; color: var(--text-muted); font-size: 13.5px;
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px;
+    padding: 40px 20px;
+  }
+  .general-apply-note {
+    font-size: 12.5px; color: var(--text-muted); text-align: center; margin: 4px 0 0;
+  }
+  .general-apply-note a { color: var(--brand); font-weight: 600; cursor: pointer; }
+
+  /* ---- application form ---- */
   .field { margin-bottom: 18px; }
   .field label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
   .field .hint { font-size: 12px; color: var(--text-muted); font-weight: 400; }
@@ -81,64 +133,194 @@
     </div>
   </div>
 
-  <div class="card" id="formCard">
-    <h1>Apply for a role</h1>
-    <p class="lead">Tell us a bit about yourself and we'll be in touch.</p>
-
-    <form id="applyForm">
-      <div class="field">
-        <label>Full name</label>
-        <input type="text" name="name" required>
-      </div>
-      <div class="row2">
-        <div class="field">
-          <label>Email</label>
-          <input type="email" name="email" required>
-        </div>
-        <div class="field">
-          <label>Phone</label>
-          <input type="tel" name="phone">
-        </div>
-      </div>
-      <div class="row2">
-        <div class="field">
-          <label>Sector</label>
-          <select name="sector">
-            <option value="Hospitality">Hospitality</option>
-            <option value="Trades & Industrial">Trades &amp; Industrial</option>
-            <option value="Office & Professional">Office &amp; Professional</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Role you're applying for</label>
-          <input type="text" name="position" placeholder="e.g. Bar Attendant" required>
-        </div>
-      </div>
-      <div class="field">
-        <label>Resume <span class="hint">PDF or Word, up to 10MB</span></label>
-        <div class="upload-box" id="uploadBox">
-          <span id="uploadLabel"><strong>Click to upload</strong> or drag and drop your resume</span>
-          <input type="file" name="resume" id="resumeInput" accept=".pdf,.doc,.docx" style="display:none">
-        </div>
-      </div>
-      <div class="field">
-        <label>Anything else you'd like us to know? <span class="hint">optional</span></label>
-        <textarea name="cover_letter" placeholder="Availability, experience, questions..."></textarea>
-      </div>
-      <button type="submit" class="submit-btn" id="submitBtn">Submit Application</button>
-      <div class="msg error" id="errorMsg"></div>
-      <div class="privacy-note">Your information is submitted securely and is only visible to Kytez Recruitment staff.</div>
-    </form>
+  <div class="tab-nav">
+    <button type="button" class="tab-btn active" id="tabBtnApply" data-tab="apply">Application</button>
+    <button type="button" class="tab-btn" id="tabBtnOpenings" data-tab="openings">Openings <span class="tab-count" id="openingsCount" style="display:none">0</span></button>
   </div>
 
-  <div class="card success-card" id="successCard" style="display:none">
-    <div class="check">&#10003;</div>
-    <h1>Application received</h1>
-    <p class="lead">Thanks for applying — our team will review your application and get in touch if there's a match.</p>
+  <!-- OPENINGS TAB -->
+  <div class="tab-panel" id="panelOpenings">
+    <h1 id="openingsHeading">Current openings</h1>
+    <p id="openingsLead">Browse our open roles below and apply directly, or submit a general application from the Application tab.</p>
+    <div id="jobList"></div>
+  </div>
+
+  <!-- APPLICATION TAB -->
+  <div class="tab-panel active" id="panelApply">
+    <div class="card" id="formCard">
+      <h1 id="formTitle">Apply for a role</h1>
+      <p class="lead">Tell us a bit about yourself and we'll be in touch.</p>
+
+      <form id="applyForm">
+        <div class="field">
+          <label>Full name</label>
+          <input type="text" name="name" required>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>Email</label>
+            <input type="email" name="email" required>
+          </div>
+          <div class="field">
+            <label>Phone</label>
+            <input type="tel" name="phone">
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>Sector</label>
+            <select name="sector">
+              <option value="Hospitality">Hospitality</option>
+              <option value="Trades & Industrial">Trades &amp; Industrial</option>
+              <option value="Office & Professional">Office &amp; Professional</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Role you're applying for</label>
+            <select id="roleSelect" name="posting_choice" style="display:none"></select>
+            <input type="text" name="position" id="positionInput" placeholder="e.g. Bar Attendant" required>
+            <input type="hidden" name="posting_id" id="postingIdInput" value="">
+          </div>
+        </div>
+        <div class="field">
+          <label>Resume <span class="hint">PDF or Word, up to 10MB</span></label>
+          <div class="upload-box" id="uploadBox">
+            <span id="uploadLabel"><strong>Click to upload</strong> or drag and drop your resume</span>
+            <input type="file" name="resume" id="resumeInput" accept=".pdf,.doc,.docx" style="display:none">
+          </div>
+        </div>
+        <div class="field">
+          <label>Anything else you'd like us to know? <span class="hint">optional</span></label>
+          <textarea name="cover_letter" placeholder="Availability, experience, questions..."></textarea>
+        </div>
+        <button type="submit" class="submit-btn" id="submitBtn">Submit Application</button>
+        <div class="msg error" id="errorMsg"></div>
+        <div class="privacy-note">Your information is submitted securely and is only visible to Kytez Recruitment staff.</div>
+      </form>
+    </div>
+
+    <div class="card success-card" id="successCard" style="display:none">
+      <div class="check">&#10003;</div>
+      <h1>Application received</h1>
+      <p class="lead">Thanks for applying — our team will review your application and get in touch if there's a match.</p>
+    </div>
   </div>
 </div>
 
 <script>
+  // ---------- tab switching ----------
+  const tabBtns = document.querySelectorAll('.tab-btn');
+  const panels = { apply: document.getElementById('panelApply'), openings: document.getElementById('panelOpenings') };
+
+  function showTab(name) {
+    tabBtns.forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+    Object.entries(panels).forEach(([key, el]) => el.classList.toggle('active', key === name));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  tabBtns.forEach(btn => btn.addEventListener('click', () => showTab(btn.dataset.tab)));
+
+  // ---------- role selection ----------
+  const select = document.getElementById('roleSelect');
+  const positionInput = document.getElementById('positionInput');
+  const postingIdInput = document.getElementById('postingIdInput');
+  const formTitle = document.getElementById('formTitle');
+
+  function selectRole(idOrOther) {
+    select.value = idOrOther;
+    syncFromSelect();
+  }
+
+  function syncFromSelect() {
+    if (select.value === 'other') {
+      positionInput.style.display = '';
+      positionInput.required = true;
+      postingIdInput.value = '';
+      formTitle.textContent = 'Apply for a role';
+    } else {
+      positionInput.style.display = 'none';
+      positionInput.required = false;
+      positionInput.value = '';
+      postingIdInput.value = select.value;
+      const opt = select.options[select.selectedIndex];
+      formTitle.textContent = opt ? 'Apply — ' + opt.dataset.title : 'Apply for a role';
+    }
+  }
+
+  function escapeHtml(s) {
+    return (s || '').replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+  }
+
+  function applyForRole(id) {
+    selectRole(id);
+    showTab('apply');
+  }
+
+  // ---------- load open postings for both the Openings tab and the role picker ----------
+  fetch('/api/postings/open').then(r => r.json()).then(data => {
+    const postings = data.postings || [];
+    const jobList = document.getElementById('jobList');
+    const countBadge = document.getElementById('openingsCount');
+
+    if (postings.length) {
+      countBadge.textContent = String(postings.length);
+      countBadge.style.display = '';
+    }
+
+    if (!postings.length) {
+      jobList.innerHTML = '<div class="empty-state">No open roles right now — check back soon, or <a href="#" id="generalApplyLink" style="color:var(--brand);font-weight:600">submit a general application</a>.</div>';
+      document.getElementById('generalApplyLink').addEventListener('click', (e) => {
+        e.preventDefault();
+        selectRole('other');
+        showTab('apply');
+      });
+      return;
+    }
+
+    jobList.innerHTML = postings.map(p => `
+      <div class="job-card">
+        <h3>${escapeHtml(p.title)}</h3>
+        <div class="job-meta">
+          ${p.sector ? `<span>${escapeHtml(p.sector)}</span>` : ''}
+          ${p.location ? `<span>${escapeHtml(p.location)}</span>` : ''}
+          ${p.employment_type ? `<span>${escapeHtml(p.employment_type)}</span>` : ''}
+        </div>
+        ${p.description ? `<div class="job-desc">${escapeHtml(p.description)}</div>` : ''}
+        <button type="button" class="job-apply-btn" data-job="${p.id}">Apply for this role</button>
+      </div>
+    `).join('') + '<div class="general-apply-note">Don\'t see a fit? <a id="generalApplyLink">Submit a general application</a> instead.</div>';
+
+    document.querySelectorAll('.job-apply-btn').forEach(btn => {
+      btn.addEventListener('click', () => applyForRole(btn.dataset.job));
+    });
+    document.getElementById('generalApplyLink').addEventListener('click', () => applyForRole('other'));
+
+    postings.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = String(p.id);
+      opt.dataset.title = p.title;
+      opt.textContent = p.title + (p.location ? ' — ' + p.location : '');
+      select.appendChild(opt);
+    });
+    const otherOpt = document.createElement('option');
+    otherOpt.value = 'other';
+    otherOpt.textContent = 'Other / general application';
+    select.appendChild(otherOpt);
+
+    select.style.display = '';
+    positionInput.placeholder = "Type the role you're applying for";
+    select.addEventListener('change', syncFromSelect);
+
+    // Deep link support: /?job=<id> opens the Application tab pre-filled with that role.
+    const jobParam = new URLSearchParams(location.search).get('job');
+    if (jobParam && postings.some(p => String(p.id) === jobParam)) {
+      applyForRole(jobParam);
+    } else {
+      selectRole(String(postings[0].id));
+    }
+  }).catch(() => {
+    document.getElementById('jobList').innerHTML = '<div class="empty-state">Couldn\'t load current openings right now. You can still submit a general application from the Application tab.</div>';
+  });
+
   const uploadBox = document.getElementById('uploadBox');
   const resumeInput = document.getElementById('resumeInput');
   uploadBox.addEventListener('click', () => resumeInput.click());
