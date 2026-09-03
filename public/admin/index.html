@@ -82,6 +82,21 @@
   .modal .row .k { color: var(--text-muted); }
   .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
   .modal-actions .btn { flex: 1; }
+
+  /* ---- postings ---- */
+  .posting-item { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; }
+  .posting-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .posting-top strong { font-size: 13.5px; }
+  .posting-status { font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; text-transform: capitalize; }
+  .posting-status.open { background: #e8f7e8; color: var(--status-good); }
+  .posting-status.closed { background: #f1f0ee; color: var(--text-muted); }
+  .posting-status.draft { background: var(--seq-100); color: var(--series-1); }
+  .posting-meta { font-size: 11.5px; color: var(--text-muted); margin-top: 4px; }
+  .posting-actions { display: flex; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .posting-actions select { width: auto; padding: 5px 8px; font-size: 12px; }
+  .btn-small { padding: 6px 10px; font-size: 12px; border-radius: 7px; }
+  .link-small { font-size: 12px; color: var(--brand); text-decoration: none; }
+  .section-divider { border: none; border-top: 1px solid var(--border); margin: 18px 0; }
 </style>
 </head>
 <body>
@@ -112,6 +127,7 @@
     <div class="admin-user">
       <div class="avatar" id="avatarInit">·</div>
       <span id="userLabel"></span>
+      <button class="link-btn" id="postingsBtn">Job Postings</button>
       <button class="link-btn" id="teamBtn">Team</button>
       <button class="link-btn" id="logoutBtn">Sign out</button>
     </div>
@@ -146,6 +162,43 @@
       <div class="modal-actions">
         <button type="button" class="btn btn-secondary" id="teamClose">Close</button>
         <button type="submit" class="btn btn-primary">Add teammate</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- POSTINGS MODAL -->
+<div class="modal-backdrop hidden" id="postingsBackdrop">
+  <div class="modal" style="max-width:560px">
+    <h2>Job postings</h2>
+    <div class="sub">Open postings appear in the "Openings" tab of your apply page. Closed and draft postings stay hidden from applicants.</div>
+    <div id="postingsList"></div>
+
+    <hr class="section-divider">
+    <div class="field"><label>Add a job posting</label></div>
+    <form id="postingForm">
+      <div class="field"><input type="text" name="title" placeholder="Job title (e.g. Bar Attendant)" required></div>
+      <div class="field">
+        <select name="sector">
+          <option value="Hospitality">Hospitality</option>
+          <option value="Trades & Industrial">Trades &amp; Industrial</option>
+          <option value="Office & Professional">Office &amp; Professional</option>
+        </select>
+      </div>
+      <div class="field"><input type="text" name="location" placeholder="Location (e.g. Sydney, NSW)"></div>
+      <div class="field">
+        <select name="employment_type">
+          <option value="Full-time">Full-time</option>
+          <option value="Part-time">Part-time</option>
+          <option value="Casual">Casual</option>
+          <option value="Contract">Contract</option>
+        </select>
+      </div>
+      <div class="field"><textarea name="description" placeholder="Short role description candidates will see"></textarea></div>
+      <div class="err" id="postingErr"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="postingsClose">Close</button>
+        <button type="submit" class="btn btn-primary">Add posting</button>
       </div>
     </form>
   </div>
@@ -321,6 +374,96 @@ document.getElementById('teamForm').addEventListener('submit', async (e) => {
   const data = await res.json();
   if (!res.ok) { errEl.textContent = data.error; errEl.style.display = 'block'; return; }
   document.getElementById('teamBtn').click();
+});
+
+let postings = [];
+
+document.getElementById('postingsBtn').addEventListener('click', loadPostings);
+document.getElementById('postingsClose').addEventListener('click', () => document.getElementById('postingsBackdrop').classList.add('hidden'));
+
+async function loadPostings() {
+  document.getElementById('postingErr').style.display = 'none';
+  document.getElementById('postingForm').reset();
+  const res = await fetch('/api/postings');
+  const data = await res.json();
+  postings = data.postings || [];
+  renderPostings();
+  document.getElementById('postingsBackdrop').classList.remove('hidden');
+}
+
+function renderPostings() {
+  const list = document.getElementById('postingsList');
+  if (!postings.length) {
+    list.innerHTML = '<div class="sub">No postings yet — add your first role below.</div>';
+    return;
+  }
+  list.innerHTML = postings.map(p => `
+    <div class="posting-item">
+      <div class="posting-top">
+        <strong>${escapeHtml(p.title)}</strong>
+        <span class="posting-status ${p.status}">${p.status}</span>
+      </div>
+      <div class="posting-meta">
+        ${[p.sector, p.location, p.employment_type].filter(Boolean).map(escapeHtml).join(' · ')}
+        ${p.sector || p.location || p.employment_type ? ' · ' : ''}${p.applicant_count} applicant${p.applicant_count === 1 ? '' : 's'}
+      </div>
+      <div class="posting-actions">
+        <select class="posting-status-select" data-id="${p.id}">
+          <option value="open" ${p.status === 'open' ? 'selected' : ''}>Open</option>
+          <option value="closed" ${p.status === 'closed' ? 'selected' : ''}>Closed</option>
+          <option value="draft" ${p.status === 'draft' ? 'selected' : ''}>Draft</option>
+        </select>
+        <button type="button" class="btn btn-secondary btn-small copy-seek-btn" data-id="${p.id}">Copy for Seek</button>
+        <a class="link-small" href="/?job=${p.id}" target="_blank">View apply link ↗</a>
+      </div>
+    </div>
+  `).join('');
+
+  list.querySelectorAll('.posting-status-select').forEach(sel => {
+    sel.addEventListener('change', async () => {
+      await fetch('/api/postings/' + sel.dataset.id, {
+        method: 'PATCH', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ status: sel.value })
+      });
+      const p = postings.find(x => String(x.id) === sel.dataset.id);
+      if (p) p.status = sel.value;
+      renderPostings();
+    });
+  });
+
+  list.querySelectorAll('.copy-seek-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const p = postings.find(x => String(x.id) === btn.dataset.id);
+      if (!p) return;
+      const meta = [p.sector, p.location, p.employment_type].filter(Boolean).join(' · ');
+      const applyUrl = location.origin + '/?job=' + p.id;
+      const text = `${p.title}\n${meta}\n\n${p.description || ''}\n\nApply here: ${applyUrl}`.trim();
+      try {
+        await navigator.clipboard.writeText(text);
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = 'Copy for Seek'; }, 1500);
+      } catch (e) {
+        alert(text); // clipboard blocked — show it so it can be copied manually
+      }
+    });
+  });
+}
+
+document.getElementById('postingForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const errEl = document.getElementById('postingErr');
+  errEl.style.display = 'none';
+  const res = await fetch('/api/postings', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({
+      title: fd.get('title'), sector: fd.get('sector'), location: fd.get('location'),
+      employment_type: fd.get('employment_type'), description: fd.get('description'), status: 'open'
+    })
+  });
+  const data = await res.json();
+  if (!res.ok) { errEl.textContent = data.error; errEl.style.display = 'block'; return; }
+  loadPostings();
 });
 
 checkAuth();
