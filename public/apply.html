@@ -136,6 +136,7 @@
   <div class="tab-nav">
     <button type="button" class="tab-btn active" id="tabBtnApply" data-tab="apply">Application</button>
     <button type="button" class="tab-btn" id="tabBtnOpenings" data-tab="openings">Openings <span class="tab-count" id="openingsCount" style="display:none">0</span></button>
+    <button type="button" class="tab-btn" id="tabBtnEmployer" data-tab="employer">Hire Staff</button>
   </div>
 
   <!-- OPENINGS TAB -->
@@ -205,12 +206,101 @@
       <p class="lead">Thanks for applying — our team will review your application and get in touch if there's a match.</p>
     </div>
   </div>
+
+  <!-- EMPLOYER TAB -->
+  <div class="tab-panel" id="panelEmployer">
+    <div class="card" id="employerFormCard">
+      <h1>Looking to hire?</h1>
+      <p class="lead">Tell us what staff you need and our team will be in touch.</p>
+
+      <form id="employerForm">
+        <div class="row2">
+          <div class="field">
+            <label>Company name</label>
+            <input type="text" name="company_name" required>
+          </div>
+          <div class="field">
+            <label>Contact name</label>
+            <input type="text" name="contact_name" required>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>Email</label>
+            <input type="email" name="email" required>
+          </div>
+          <div class="field">
+            <label>Phone</label>
+            <input type="tel" name="phone">
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>Sector</label>
+            <select name="sector">
+              <option value="Hospitality">Hospitality</option>
+              <option value="Trades & Industrial">Trades &amp; Industrial</option>
+              <option value="Office & Professional">Office &amp; Professional</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Employment type</label>
+            <select name="employment_type">
+              <option value="Full-time">Full-time</option>
+              <option value="Part-time">Part-time</option>
+              <option value="Casual">Casual</option>
+              <option value="Contract">Contract</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Roles needed <span class="hint">e.g. "2x Kitchen Hands, 1x Bar Attendant"</span></label>
+          <input type="text" name="roles_needed" required>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>How many staff <span class="hint">optional</span></label>
+            <input type="text" name="staff_count" inputmode="numeric" placeholder="e.g. 3">
+          </div>
+          <div class="field">
+            <label>When do you need them by <span class="hint">optional</span></label>
+            <input type="text" name="start_date" placeholder="e.g. ASAP, or 1 Oct">
+          </div>
+        </div>
+        <div class="field">
+          <label>Pay rate <span class="hint">optional</span></label>
+          <input type="text" name="pay_rate" placeholder="e.g. $28-32/hr">
+        </div>
+        <div class="field">
+          <label>Shift & schedule details <span class="hint">optional</span></label>
+          <textarea name="shift_details" placeholder="Days, hours, ongoing vs one-off..."></textarea>
+        </div>
+        <div class="field">
+          <label>Anything else we should know? <span class="hint">optional</span></label>
+          <textarea name="message"></textarea>
+        </div>
+        <button type="submit" class="submit-btn" id="employerSubmitBtn">Submit Request</button>
+        <div class="msg error" id="employerErrorMsg"></div>
+        <div class="privacy-note">Your details are submitted securely and only visible to Kytez Recruitment staff.</div>
+      </form>
+    </div>
+
+    <div class="card success-card" id="employerSuccessCard" style="display:none">
+      <div class="check">&#10003;</div>
+      <h1>Request received</h1>
+      <p class="lead">Thanks — our team will review your staffing request and be in touch shortly.</p>
+    </div>
+  </div>
 </div>
 
 <script>
   // ---------- tab switching ----------
   const tabBtns = document.querySelectorAll('.tab-btn');
-  const panels = { apply: document.getElementById('panelApply'), openings: document.getElementById('panelOpenings') };
+  const panels = {
+    apply: document.getElementById('panelApply'),
+    openings: document.getElementById('panelOpenings'),
+    employer: document.getElementById('panelEmployer')
+  };
 
   function showTab(name) {
     tabBtns.forEach(b => b.classList.toggle('active', b.dataset.tab === name));
@@ -218,6 +308,11 @@
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
   tabBtns.forEach(btn => btn.addEventListener('click', () => showTab(btn.dataset.tab)));
+
+  // Deep link support: /employers opens straight to the Hire Staff tab.
+  if (location.pathname === '/employers') {
+    showTab('employer');
+  }
 
   // ---------- role selection ----------
   const select = document.getElementById('roleSelect');
@@ -352,6 +447,34 @@
       errorMsg.style.display = 'block';
       submitBtn.disabled = false;
       submitBtn.textContent = 'Submit Application';
+    }
+  });
+
+  const employerForm = document.getElementById('employerForm');
+  const employerErrorMsg = document.getElementById('employerErrorMsg');
+  const employerSubmitBtn = document.getElementById('employerSubmitBtn');
+
+  employerForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    employerErrorMsg.style.display = 'none';
+    employerSubmitBtn.disabled = true;
+    employerSubmitBtn.textContent = 'Submitting...';
+    try {
+      const fd = new FormData(employerForm);
+      const payload = Object.fromEntries(fd.entries());
+      const res = await fetch('/api/employer-requests', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Something went wrong.');
+      document.getElementById('employerFormCard').style.display = 'none';
+      document.getElementById('employerSuccessCard').style.display = 'block';
+    } catch (err) {
+      employerErrorMsg.textContent = err.message;
+      employerErrorMsg.style.display = 'block';
+      employerSubmitBtn.disabled = false;
+      employerSubmitBtn.textContent = 'Submit Request';
     }
   });
 </script>
