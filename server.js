@@ -45,6 +45,7 @@ function requireAuth(req, res, next) {
 // ---------- static public pages ----------
 app.use('/assets', express.static(path.join(__dirname, 'public/assets')));
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public/apply.html')));
+app.get('/employers', (req, res) => res.sendFile(path.join(__dirname, 'public/apply.html')));
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public/admin/index.html')));
 
 // public: list of currently open postings, shown in the Openings tab of the apply page
@@ -103,6 +104,35 @@ app.post('/api/apply', handleUpload, async (req, res) => {
   } catch (err) {
     console.error('apply error', err);
     res.status(500).json({ error: 'Something went wrong submitting your application. Please try again.' });
+  }
+});
+
+// employers: submit a staffing request from the "Hire Staff" tab
+app.post('/api/employer-requests', async (req, res) => {
+  try {
+    const {
+      company_name, contact_name, email, phone, sector, roles_needed,
+      staff_count, employment_type, start_date, pay_rate, shift_details, message
+    } = req.body;
+
+    if (!company_name || !contact_name || !email || !roles_needed) {
+      return res.status(400).json({ error: 'Company name, contact name, email, and roles needed are required.' });
+    }
+    const staffCountNum = parseInt(staff_count, 10);
+
+    await pool.query(
+      `INSERT INTO employer_requests
+        (company_name, contact_name, email, phone, sector, roles_needed, staff_count,
+         employment_type, start_date, pay_rate, shift_details, message)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+      [company_name, contact_name, email, phone || null, sector || null, roles_needed,
+       Number.isFinite(staffCountNum) ? staffCountNum : null, employment_type || null,
+       start_date || null, pay_rate || null, shift_details || null, message || null]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('employer request error', err);
+    res.status(500).json({ error: 'Something went wrong submitting your request. Please try again.' });
   }
 });
 
@@ -177,6 +207,7 @@ app.post('/api/admins', requireAuth, async (req, res) => {
 // ---------- protected admin API ----------
 const STAGES = ['applied', 'screening', 'interview', 'offer', 'hired', 'rejected'];
 const POSTING_STATUSES = ['draft', 'open', 'closed'];
+const EMPLOYER_STATUSES = ['new', 'contacted', 'closed'];
 
 app.get('/api/candidates', requireAuth, async (req, res) => {
   const { rows } = await pool.query(
@@ -233,6 +264,25 @@ app.patch('/api/postings/:id', requireAuth, async (req, res) => {
   fields.push('updated_at = now()');
   values.push(id);
   await pool.query(`UPDATE job_postings SET ${fields.join(', ')} WHERE id = $${i}`, values);
+  res.json({ ok: true });
+});
+
+// employer requests — staffing enquiries submitted through the "Hire Staff" tab
+app.get('/api/employer-requests', requireAuth, async (req, res) => {
+  const { rows } = await pool.query(
+    `SELECT * FROM employer_requests ORDER BY created_at DESC`
+  );
+  res.json({ requests: rows });
+});
+
+app.patch('/api/employer-requests/:id', requireAuth, async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+  if (status !== undefined && !EMPLOYER_STATUSES.includes(status)) {
+    return res.status(400).json({ error: 'Invalid status.' });
+  }
+  if (status === undefined) return res.json({ ok: true });
+  await pool.query('UPDATE employer_requests SET status = $1, updated_at = now() WHERE id = $2', [status, id]);
   res.json({ ok: true });
 });
 
