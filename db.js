@@ -37,6 +37,31 @@ async function initSchema() {
   `);
 
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS employer_requests (
+      id SERIAL PRIMARY KEY,
+      company_name TEXT NOT NULL,
+      contact_name TEXT NOT NULL,
+      email TEXT NOT NULL,
+      phone TEXT,
+      sector TEXT,
+      roles_needed TEXT NOT NULL,
+      staff_count INTEGER,
+      employment_type TEXT,
+      start_date TEXT,
+      pay_rate TEXT,
+      shift_details TEXT,
+      message TEXT,
+      status TEXT NOT NULL DEFAULT 'new',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_employer_requests_status ON employer_requests(status);
+  `);
+
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS candidates (
       id SERIAL PRIMARY KEY,
       name TEXT NOT NULL,
