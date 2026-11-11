@@ -57,6 +57,73 @@ app.get('/api/postings/open', async (req, res) => {
   res.json({ postings: rows });
 });
 
+// ---------- public jobs API (read by the kytez.com.au marketing website) ----------
+// Read-only, no login. Only returns postings with status 'open' and only public fields.
+// CORS: set PUBLIC_API_ORIGINS to a comma-separated list of allowed site origins
+// (e.g. "https://kytez.com.au,https://www.kytez.com.au"). If unset, any origin may read.
+const PUBLIC_API_ORIGINS = (process.env.PUBLIC_API_ORIGINS || '')
+  .split(',').map(s => s.trim().replace(/\/$/, '')).filter(Boolean);
+
+function publicCors(req, res, next) {
+  const origin = req.headers.origin;
+  if (!PUBLIC_API_ORIGINS.length) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  } else if (origin && PUBLIC_API_ORIGINS.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+}
+
+function publicBaseUrl(req) {
+  return (process.env.PUBLIC_BASE_URL || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
+}
+
+function toPublicJob(row, base) {
+  return {
+    id: row.id,
+    title: row.title,
+    sector: row.sector,
+    location: row.location,
+    employment_type: row.employment_type,
+    description: row.description,
+    posted_at: row.created_at,
+    updated_at: row.updated_at,
+    apply_url: `${base}/?job=${row.id}`
+  };
+}
+
+const PUBLIC_JOB_FIELDS = 'id, title, sector, location, employment_type, description, created_at, updated_at';
+
+app.use('/api/public', publicCors);
+
+app.get('/api/public/jobs', async (req, res, next) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT ${PUBLIC_JOB_FIELDS} FROM job_postings WHERE status = 'open' ORDER BY created_at DESC`
+    );
+    const base = publicBaseUrl(req);
+    res.setHeader('Cache-Control', 'public, max-age=60');
+    res.json({ jobs: rows.map(r => toPublicJob(r, base)) });
+  } catch (err) { next(err); }
+});
+
+app.get('/api/public/jobs/:id', async (req, res, next) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isInteger(id) || id <= 0) return res.status(404).json({ error: 'Job not found.' });
+    const { rows } = await pool.query(
+      `SELECT ${PUBLIC_JOB_FIELDS} FROM job_postings WHERE id = $1 AND status = 'open'`, [id]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Job not found or no longer open.' });
+    res.setHeader('Cache-Control', 'public, max-age=60');
+    res.json({ job: toPublicJob(rows[0], publicBaseUrl(req)) });
+  } catch (err) { next(err); }
+});
+
 // ---------- public API ----------
 function handleUpload(req, res, next) {
   upload.single('resume')(req, res, (err) => {

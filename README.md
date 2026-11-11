@@ -74,3 +74,9 @@ Wix) have an "embed HTML" or "custom code" block you can paste this into:
 The admin dashboard (`/admin`) is **never** linked from the public site —
 only people who know that URL and have a login can reach it. Bookmark it
 for the people who need it.
+
+## Showing jobs on the marketing website
+
+Open postings are exposed read-only at `/api/public/jobs` (and
+`/api/public/jobs/:id`) so the kytez.com.au site can list them, with each job's
+Apply button linking back to the ATS apply page. See `PUBLIC_API.md`.
