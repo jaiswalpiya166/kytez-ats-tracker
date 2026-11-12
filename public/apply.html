@@ -410,7 +410,7 @@
     if (jobParam && postings.some(p => String(p.id) === jobParam)) {
       applyForRole(jobParam);
     } else {
-      selectRole(String(postings[0].id));
+         selectRole('other');
     }
   }).catch(() => {
     document.getElementById('jobList').innerHTML = '<div class="empty-state">Couldn\'t load current openings right now. You can still submit a general application from the Application tab.</div>';
