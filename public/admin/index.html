@@ -73,6 +73,45 @@
   .card-item .cdate { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
   .empty-col { font-size: 11.5px; color: var(--text-muted); text-align: center; padding: 20px 0; }
 
+  /* ---- job postings section ---- */
+  .jobs-section { margin-top: 34px; }
+  .jobs-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+  .jobs-head .board-sub { margin-bottom: 0; }
+  .job-filters { display: flex; gap: 6px; flex-wrap: wrap; }
+  .job-filter { border: 1px solid var(--border); background: var(--surface-1); border-radius: 999px; padding: 6px 12px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; color: var(--text-secondary); }
+  .job-filter.active { background: var(--brand); color: #fff; border-color: var(--brand); }
+  .job-list { display: flex; flex-direction: column; gap: 10px; }
+  .job-card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+  .job-card.open-panel { border-color: var(--brand); }
+  .job-row { display: flex; align-items: center; gap: 14px; padding: 14px 18px; cursor: pointer; width: 100%; background: none; border: 0; font-family: inherit; text-align: left; color: inherit; }
+  .job-row:hover { background: var(--page-plane); }
+  .job-row .jt { flex: 1; min-width: 0; }
+  .job-row .jt strong { font-size: 14px; display: block; }
+  .job-row .jt span { font-size: 12px; color: var(--text-muted); }
+  .job-badge { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; text-transform: capitalize; }
+  .job-badge.open { background: #e8f7e8; color: #0a7a0a; }
+  .job-badge.draft { background: #fff4dc; color: #8a5b00; }
+  .job-badge.closed { background: #eeeeec; color: var(--text-secondary); }
+  .job-count { font-size: 12px; font-weight: 700; color: var(--brand); background: var(--brand-light); padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
+  .job-chev { color: var(--text-muted); transition: transform .15s; }
+  .job-card.open-panel .job-chev { transform: rotate(90deg); }
+  .job-detail { display: none; border-top: 1px solid var(--border); padding: 18px; }
+  .job-card.open-panel .job-detail { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 24px; }
+  .job-detail h4 { margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); }
+  .job-facts { font-size: 13px; margin-bottom: 14px; }
+  .job-facts div { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+  .job-facts .k { color: var(--text-muted); }
+  .job-desc { font-size: 13.5px; line-height: 1.55; white-space: pre-wrap; color: var(--text-secondary); }
+  .job-applicants { display: flex; flex-direction: column; gap: 6px; }
+  .applicant-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--page-plane); cursor: pointer; width: 100%; font-family: inherit; text-align: left; color: inherit; }
+  .applicant-row:hover { border-color: var(--brand); }
+  .applicant-row .an { flex: 1; min-width: 0; }
+  .applicant-row .an strong { font-size: 13px; display: block; }
+  .applicant-row .an span { font-size: 11.5px; color: var(--text-muted); overflow-wrap: anywhere; }
+  .stage-pill { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; color: #fff; white-space: nowrap; }
+  .applicant-row .ad { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+  @media (max-width: 800px) { .job-card.open-panel .job-detail { grid-template-columns: 1fr; } }
+
   /* ---- employee application ---- */
   .ff-box { border: 1px solid var(--border); border-radius: 10px; padding: 12px; background: #fff; color: var(--text-primary); font-size: 13px; }
   .ff-box .btn { padding: 8px 12px; font-size: 13px; }
@@ -156,6 +195,22 @@
     <div class="board-title">Candidate pipeline</div>
     <div class="board-sub">Click a candidate to view details, download their resume, or move them to the next stage.</div>
     <div class="board" id="board"></div>
+
+    <div class="jobs-section">
+      <div class="jobs-head">
+        <div>
+          <div class="board-title">Job postings</div>
+          <div class="board-sub">Click a job to see its description and everyone who applied. Click an applicant to open their full application.</div>
+        </div>
+        <div class="job-filters" id="jobFilters">
+          <button class="job-filter active" data-f="all">All</button>
+          <button class="job-filter" data-f="open">Open</button>
+          <button class="job-filter" data-f="draft">Draft</button>
+          <button class="job-filter" data-f="closed">Closed</button>
+        </div>
+      </div>
+      <div class="job-list" id="jobList"></div>
+    </div>
   </div>
 </div>
 
@@ -304,10 +359,12 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
 });
 
 async function loadDashboard() {
-  const [statsRes, candRes] = await Promise.all([fetch('/api/stats'), fetch('/api/candidates')]);
+  const [statsRes, candRes, jobsRes] = await Promise.all([fetch('/api/stats'), fetch('/api/candidates'), fetch('/api/postings')]);
   const stats = await statsRes.json();
   const candData = await candRes.json();
   candidates = candData.candidates;
+  dashJobs = (await jobsRes.json()).postings || [];
+  renderJobList();
 
   document.getElementById('statTotal').textContent = stats.total;
   document.getElementById('statNew').textContent = stats.newThisWeek;
@@ -336,6 +393,73 @@ async function loadDashboard() {
     board.appendChild(col);
   });
 }
+
+// ---------- job postings section ----------
+let dashJobs = [];
+let jobFilter = 'all';
+let openJobId = null;
+
+function stageInfo(key) { return STAGES.find(s => s.key === key) || { label: key, color: 'var(--text-muted)' }; }
+
+function renderJobList() {
+  const list = document.getElementById('jobList');
+  const jobs = dashJobs.filter(j => jobFilter === 'all' || j.status === jobFilter);
+  if (!jobs.length) {
+    list.innerHTML = `<div class="col empty-col" style="min-height:0">${dashJobs.length ? 'No ' + jobFilter + ' jobs.' : 'No jobs posted yet. Use <b>Job Postings</b> at the top to add one.'}</div>`;
+    return;
+  }
+  list.innerHTML = jobs.map(j => {
+    const applicants = candidates.filter(c => c.posting_id === j.id);
+    const meta = [j.sector, j.location, j.employment_type].filter(Boolean).map(escapeHtml).join(' · ');
+    const facts = [['Sector', j.sector], ['Location', j.location], ['Employment type', j.employment_type],
+      ['Posted', new Date(j.created_at).toLocaleDateString()], ['Last updated', new Date(j.updated_at).toLocaleDateString()]]
+      .filter(([, v]) => v).map(([k, v]) => `<div><span class="k">${k}</span><span>${escapeHtml(String(v))}</span></div>`).join('');
+    const appl = applicants.length ? applicants.map(c => {
+      const st = stageInfo(c.stage);
+      return `<button type="button" class="applicant-row" data-cid="${c.id}">
+          <div class="an"><strong>${escapeHtml(c.name)}</strong><span>${escapeHtml(c.email)}${c.phone ? ' · ' + escapeHtml(c.phone) : ''}</span></div>
+          <span class="stage-pill" style="background:${st.color}">${st.label}</span>
+          <span class="ad">${timeAgo(c.created_at)}</span>
+        </button>`;
+    }).join('') : '<div class="sub">No one has applied for this job yet.</div>';
+    return `<div class="job-card ${openJobId === j.id ? 'open-panel' : ''}" data-jid="${j.id}">
+      <button type="button" class="job-row">
+        <div class="jt"><strong>${escapeHtml(j.title)}</strong><span>${meta || '&nbsp;'}</span></div>
+        <span class="job-badge ${j.status}">${j.status}</span>
+        <span class="job-count">${applicants.length} applicant${applicants.length === 1 ? '' : 's'}</span>
+        <span class="job-chev">›</span>
+      </button>
+      <div class="job-detail">
+        <div>
+          <h4>Job details</h4>
+          <div class="job-facts">${facts}</div>
+          <h4>Description</h4>
+          <div class="job-desc">${j.description ? escapeHtml(j.description) : '<span class="sub">No description added.</span>'}</div>
+          <div style="margin-top:12px"><a class="link-small" href="/?job=${j.id}" target="_blank" rel="noopener">View public apply page ↗</a></div>
+        </div>
+        <div>
+          <h4>Applicants (${applicants.length})</h4>
+          <div class="job-applicants">${appl}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  list.querySelectorAll('.job-row').forEach(row => row.addEventListener('click', () => {
+    const id = Number(row.parentElement.dataset.jid);
+    openJobId = openJobId === id ? null : id;
+    renderJobList();
+  }));
+  list.querySelectorAll('.applicant-row').forEach(row => row.addEventListener('click', () => openModal(Number(row.dataset.cid))));
+}
+
+document.getElementById('jobFilters').addEventListener('click', (e) => {
+  const btn = e.target.closest('.job-filter');
+  if (!btn) return;
+  jobFilter = btn.dataset.f;
+  document.querySelectorAll('.job-filter').forEach(b => b.classList.toggle('active', b === btn));
+  renderJobList();
+});
 
 function escapeHtml(s) { return (s||'').replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
 function timeAgo(dateStr) {
@@ -499,7 +623,7 @@ document.getElementById('teamForm').addEventListener('submit', async (e) => {
 let postings = [];
 
 document.getElementById('postingsBtn').addEventListener('click', loadPostings);
-document.getElementById('postingsClose').addEventListener('click', () => document.getElementById('postingsBackdrop').classList.add('hidden'));
+document.getElementById('postingsClose').addEventListener('click', () => { document.getElementById('postingsBackdrop').classList.add('hidden'); loadDashboard(); });
 
 async function loadPostings() {
   document.getElementById('postingErr').style.display = 'none';
