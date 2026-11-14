@@ -7,6 +7,7 @@ const pgSession = require('connect-pg-simple')(session);
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
 const { pool, initSchema } = require('./db');
+const { sendEmployeeApplicationEmail, isEmailConfigured } = require('./mailer');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -438,7 +439,7 @@ app.get('/api/candidates', requireAuth, async (req, res) => {
   const { rows } = await pool.query(
     `SELECT id, name, email, phone, sector, position, posting_id, cover_letter, stage, notes,
             resume_filename, created_at, updated_at,
-            full_form_sent_at, full_form_submitted_at, (full_form_token IS NOT NULL) AS full_form_link_active
+            full_form_sent_at, full_form_emailed_at, full_form_submitted_at, (full_form_token IS NOT NULL) AS full_form_link_active
      FROM candidates ORDER BY created_at DESC`
   );
   res.json({ candidates: rows });
@@ -512,41 +513,62 @@ app.patch('/api/employer-requests/:id', requireAuth, async (req, res) => {
   res.json({ ok: true });
 });
 
-app.patch('/api/candidates/:id', requireAuth, async (req, res) => {
-  const { id } = req.params;
-  const { stage, notes } = req.body;
-  if (stage && !STAGES.includes(stage)) {
-    return res.status(400).json({ error: 'Invalid stage.' });
-  }
-  const fields = [];
-  const values = [];
-  let i = 1;
-  if (stage !== undefined) { fields.push(`stage = $${i++}`); values.push(stage); }
-  if (notes !== undefined) { fields.push(`notes = $${i++}`); values.push(notes); }
-  fields.push(`updated_at = now()`);
-  values.push(id);
-  await pool.query(`UPDATE candidates SET ${fields.join(', ')} WHERE id = $${i}`, values);
-  res.json({ ok: true });
+app.patch('/api/candidates/:id', requireAuth, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { stage, notes } = req.body;
+    if (stage && !STAGES.includes(stage)) {
+      return res.status(400).json({ error: 'Invalid stage.' });
+    }
+    const before = await pool.query('SELECT stage FROM candidates WHERE id = $1', [id]);
+    if (!before.rows[0]) return res.status(404).json({ error: 'Candidate not found.' });
+
+    const fields = [];
+    const values = [];
+    let i = 1;
+    if (stage !== undefined) { fields.push(`stage = $${i++}`); values.push(stage); }
+    if (notes !== undefined) { fields.push(`notes = $${i++}`); values.push(notes); }
+    fields.push(`updated_at = now()`);
+    values.push(id);
+    await pool.query(`UPDATE candidates SET ${fields.join(', ')} WHERE id = $${i}`, values);
+
+    // Just moved to Hired: create their private employee-application link and email it.
+    let fullForm = null;
+    if (stage === 'hired' && before.rows[0].stage !== 'hired') {
+      fullForm = await issueFullFormLink(id, req);
+    }
+    res.json({ ok: true, fullForm });
+  } catch (err) { next(err); }
 });
+
+// Creates a fresh one-time link for a hired candidate (disabling any older link) and
+// emails it to the address they applied with. Returns { url, emailed, email, reason }.
+async function issueFullFormLink(id, req) {
+  const { rows } = await pool.query(
+    'SELECT id, name, email, position, stage, full_form_submitted_at FROM candidates WHERE id = $1', [id]
+  );
+  const c = rows[0];
+  if (!c) return { error: 'Candidate not found.' };
+  if (c.stage !== 'hired') return { error: 'The employee application is only for hired candidates. Move this candidate to Hired first.' };
+  if (c.full_form_submitted_at) return { error: 'This candidate has already submitted their employee application.', submitted: true };
+
+  const token = crypto.randomBytes(32).toString('hex');
+  const url = `${publicBaseUrl(req)}/full-application?token=${token}`;
+  await pool.query(
+    'UPDATE candidates SET full_form_token = $1, full_form_sent_at = now(), updated_at = now() WHERE id = $2',
+    [token, c.id]
+  );
+  const mail = await sendEmployeeApplicationEmail({ to: c.email, name: c.name, position: c.position, url });
+  if (mail.sent) await pool.query('UPDATE candidates SET full_form_emailed_at = now() WHERE id = $1', [c.id]);
+  return { url, email: c.email, emailed: mail.sent, reason: mail.reason || null };
+}
 
 // full employee application: create (or replace) the private link. Only for hired candidates.
 app.post('/api/candidates/:id/full-form-link', requireAuth, async (req, res, next) => {
   try {
-    const { rows } = await pool.query('SELECT id, stage, full_form_submitted_at FROM candidates WHERE id = $1', [req.params.id]);
-    const c = rows[0];
-    if (!c) return res.status(404).json({ error: 'Candidate not found.' });
-    if (c.stage !== 'hired') {
-      return res.status(400).json({ error: 'The employee application is only for hired candidates. Move this candidate to Hired first.' });
-    }
-    if (c.full_form_submitted_at) {
-      return res.status(400).json({ error: 'This candidate has already submitted their employee application.' });
-    }
-    const token = crypto.randomBytes(32).toString('hex');
-    await pool.query(
-      'UPDATE candidates SET full_form_token = $1, full_form_sent_at = now(), updated_at = now() WHERE id = $2',
-      [token, c.id]
-    );
-    res.json({ ok: true, url: `${publicBaseUrl(req)}/full-application?token=${token}` });
+    const result = await issueFullFormLink(req.params.id, req);
+    if (result.error) return res.status(result.error === 'Candidate not found.' ? 404 : 400).json(result);
+    res.json({ ok: true, ...result });
   } catch (err) { next(err); }
 });
 

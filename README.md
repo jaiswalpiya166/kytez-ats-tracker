@@ -83,13 +83,18 @@ Apply button linking back to the ATS apply page. See `PUBLIC_API.md`.
 
 ## Employee application (hired candidates only)
 
-Once a candidate is moved to **Hired**, open them in the dashboard and use
-**Employee application → Create link**. Send that private link to the candidate
-by email or SMS. It opens the full Kytez employee application form (personal
+When a candidate is moved to **Hired**, the ATS automatically creates a private
+link and emails it to the address they applied with. The link opens the full
+Kytez employee application form (personal
 details, work rights, history, licences, references, and PDF uploads of their
 passport or birth certificate, visa, photo ID and Medicare/other ID).
 
-- Each link works once; creating a new link disables the old one.
+- The dashboard shows when the email was sent. **Send a new link** emails a
+  fresh link and disables the old one (e.g. if they lost the email).
+- Each link works once.
+- Email needs the `SMTP_*` and `MAIL_FROM` settings from `.env.example` set on
+  Render. Without them nothing is emailed, and the dashboard shows the link so
+  staff can send it themselves.
 - Answers and documents appear in the same candidate popup. Documents can only
   be opened by signed-in staff.
 - After verifying a candidate's identity, use **Delete ID documents** so

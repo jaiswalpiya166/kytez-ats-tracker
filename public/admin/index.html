@@ -367,6 +367,18 @@ function openModal(id) {
 }
 
 // ---------- employee application (hired candidates only) ----------
+function showLinkResult(out, data, c) {
+  const msg = data.emailed
+    ? `<div class="sub" style="margin:8px 0 0;color:var(--status-good)">✓ Emailed to ${escapeHtml(data.email)}. You can also copy the link:</div>`
+    : `<div class="err" style="display:block;margin:8px 0 0">${data.reason === 'not_configured'
+        ? 'Email isn\'t set up on the server yet, so nothing was sent.'
+        : 'The email to ' + escapeHtml(data.email) + ' failed to send.'} Copy this link and send it to ${escapeHtml(c.name)} yourself:</div>`;
+  out.innerHTML = msg + `<div class="ff-link"><input readonly value="${escapeHtml(data.url)}"><button class="btn btn-secondary ff-copy">Copy</button></div>
+    <div class="sub" style="margin:6px 0 0">The link works once.</div>`;
+  const copy = out.querySelector('.ff-copy');
+  copy.addEventListener('click', () => navigator.clipboard.writeText(data.url).then(() => { copy.textContent = 'Copied'; }));
+}
+
 const FF_GROUPS = [
   ['Personal details', ['first_name','last_name','preferred_name','date_of_birth','address','suburb','state','postcode','phone','email','preferred_contact']],
   ['Position', ['position','job_reference','employment_type','preferred_location','available_start_date','expected_pay','shift_types']],
@@ -389,22 +401,24 @@ async function renderFullForm(c) {
     return;
   }
   if (!c.full_form_submitted_at) {
-    const sent = c.full_form_sent_at ? `Link sent ${new Date(c.full_form_sent_at).toLocaleDateString()}. Not submitted yet.` : 'Not sent yet.';
-    body.innerHTML = `<div class="ff-box">${sent}
-      <div style="margin-top:8px"><button class="btn btn-secondary" id="ffMakeLink">${c.full_form_sent_at ? 'Create a new link' : 'Create link'}</button></div>
+    let status = 'Not sent yet.';
+    if (c.full_form_emailed_at) status = `Emailed to <b>${escapeHtml(c.email)}</b> on ${new Date(c.full_form_emailed_at).toLocaleString()}. Not submitted yet.`;
+    else if (c.full_form_sent_at) status = `Link created ${new Date(c.full_form_sent_at).toLocaleString()} but not emailed. Copy it from a new link below. Not submitted yet.`;
+    body.innerHTML = `<div class="ff-box">${status}
+      <div style="margin-top:8px"><button class="btn btn-secondary" id="ffMakeLink">${c.full_form_sent_at ? 'Send a new link' : 'Send link'}</button></div>
       <div id="ffLinkOut"></div>
-      ${c.full_form_sent_at ? '<div class="sub" style="margin:6px 0 0">Creating a new link stops the old one working.</div>' : ''}</div>`;
+      ${c.full_form_sent_at ? '<div class="sub" style="margin:6px 0 0">Sending a new link emails it again and stops the old one working.</div>' : ''}</div>`;
     document.getElementById('ffMakeLink').addEventListener('click', async () => {
+      const btn = document.getElementById('ffMakeLink');
+      btn.disabled = true; btn.textContent = 'Sending…';
       const res = await fetch('/api/candidates/' + c.id + '/full-form-link', { method: 'POST' });
       const data = await res.json();
+      btn.disabled = false; btn.textContent = 'Send a new link';
       const out = document.getElementById('ffLinkOut');
       if (!res.ok) { out.innerHTML = `<div class="err" style="display:block;margin:8px 0 0">${escapeHtml(data.error)}</div>`; return; }
       c.full_form_sent_at = new Date().toISOString();
-      out.innerHTML = `<div class="ff-link"><input readonly value="${escapeHtml(data.url)}"><button class="btn btn-secondary" id="ffCopy">Copy</button></div>
-        <div class="sub" style="margin:6px 0 0">Send this link to ${escapeHtml(c.name)} by email or SMS. It works once.</div>`;
-      document.getElementById('ffCopy').addEventListener('click', () => {
-        navigator.clipboard.writeText(data.url).then(() => { document.getElementById('ffCopy').textContent = 'Copied'; });
-      });
+      if (data.emailed) c.full_form_emailed_at = c.full_form_sent_at;
+      showLinkResult(out, data, c);
     });
     return;
   }
@@ -437,12 +451,24 @@ document.getElementById('mClose').addEventListener('click', () => document.getEl
 document.getElementById('mSave').addEventListener('click', async () => {
   const stage = document.getElementById('mStage').value;
   const notes = document.getElementById('mNotes').value;
-  await fetch('/api/candidates/' + currentId, {
+  const res = await fetch('/api/candidates/' + currentId, {
     method: 'PATCH', headers: {'Content-Type':'application/json'},
     body: JSON.stringify({ stage, notes })
   });
+  const data = await res.json().catch(() => ({}));
+  await loadDashboard();
+  // Moved to Hired: keep the popup open and say whether the employee application was emailed.
+  if (data.fullForm && !data.fullForm.error) {
+    const c = candidates.find(x => x.id === currentId);
+    openModal(currentId);
+    const box = document.querySelector('#mFullFormBody .ff-box');
+    const out = document.createElement('div');
+    box.appendChild(out);
+    showLinkResult(out, data.fullForm, c);
+    document.getElementById('mFullForm').scrollIntoView({ block: 'nearest' });
+    return;
+  }
   document.getElementById('modalBackdrop').classList.add('hidden');
-  loadDashboard();
 });
 
 document.getElementById('teamBtn').addEventListener('click', async () => {

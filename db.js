@@ -91,6 +91,7 @@ async function initSchema() {
     ALTER TABLE candidates
       ADD COLUMN IF NOT EXISTS full_form_token TEXT UNIQUE,
       ADD COLUMN IF NOT EXISTS full_form_sent_at TIMESTAMPTZ,
+      ADD COLUMN IF NOT EXISTS full_form_emailed_at TIMESTAMPTZ,
       ADD COLUMN IF NOT EXISTS full_form_data JSONB,
       ADD COLUMN IF NOT EXISTS full_form_submitted_at TIMESTAMPTZ;
   `);
