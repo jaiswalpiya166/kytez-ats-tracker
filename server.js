@@ -1,5 +1,6 @@
 require('dotenv').config();
 const path = require('path');
+const crypto = require('crypto');
 const express = require('express');
 const session = require('express-session');
 const pgSession = require('connect-pg-simple')(session);
@@ -46,6 +47,7 @@ function requireAuth(req, res, next) {
 app.use('/assets', express.static(path.join(__dirname, 'public/assets')));
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public/apply.html')));
 app.get('/employers', (req, res) => res.sendFile(path.join(__dirname, 'public/apply.html')));
+app.get('/full-application', (req, res) => res.sendFile(path.join(__dirname, 'public/full-application.html')));
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public/admin/index.html')));
 
 // public: list of currently open postings, shown in the Openings tab of the apply page
@@ -174,6 +176,162 @@ app.post('/api/apply', handleUpload, async (req, res) => {
   }
 });
 
+// ---------- full Kytez employee application (step 2, private link) ----------
+// Staff generate a one-time link for a shortlisted candidate from the admin dashboard.
+// The candidate opens /full-application?token=..., fills in the full form and uploads
+// identity documents. The link stops working once the form has been submitted.
+
+const PDF_TYPES = ['application/pdf'];
+const RESUME_TYPES = ['application/pdf', 'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+const CERT_TYPES = ['application/pdf', 'image/jpeg', 'image/png'];
+
+const FULL_FORM_FILES = {
+  resume: { types: RESUME_TYPES, max: 1, label: 'Resume' },
+  supporting_documents: { types: CERT_TYPES, max: 5, label: 'Certificate / licence' },
+  id_passport_or_birth_certificate: { types: PDF_TYPES, max: 1, label: 'Passport or birth certificate', id: true },
+  id_visa_copy: { types: PDF_TYPES, max: 1, label: 'Visa copy', id: true },
+  id_driver_licence_or_photo_id: { types: PDF_TYPES, max: 1, label: 'Driver licence or photo ID', id: true },
+  id_medicare_or_other: { types: PDF_TYPES, max: 1, label: 'Medicare or other ID', id: true }
+};
+
+// Every text field the full form can send. Anything else in the body is ignored.
+const FULL_FORM_FIELDS = [
+  'first_name', 'last_name', 'preferred_name', 'date_of_birth', 'address', 'suburb', 'state', 'postcode',
+  'phone', 'email', 'preferred_contact',
+  'position', 'job_reference', 'employment_type', 'preferred_location', 'available_start_date', 'expected_pay',
+  'work_rights', 'work_status', 'visa_subclass', 'visa_expiry', 'visa_conditions',
+  'education', 'qualification', 'institution', 'year_completed', 'industry_experience', 'skills_experience',
+  'most_recent_employer', 'most_recent_position', 'most_recent_dates', 'reason_for_leaving', 'duties_responsibilities',
+  'previous_employer', 'previous_position', 'previous_dates', 'previous_reason_for_leaving', 'previous_duties',
+  'other_licence_details', 'licence_expiry', 'preferred_hours', 'short_notice',
+  'injury_affecting_role', 'injury_details',
+  'workforce_australia', 'employment_provider', 'employment_support', 'employment_support_details',
+  'provider_contact_consent',
+  'referee1_name', 'referee1_company_position', 'referee1_relationship', 'referee1_phone', 'referee1_email',
+  'referee2_name', 'referee2_company_position', 'referee2_relationship', 'referee2_phone', 'referee2_email',
+  'reference_consent', 'declaration', 'privacy_recruitment_consent', 'privacy_sharing_consent',
+  'future_contact_consent', 'applicant_full_name', 'submission_date'
+];
+const FULL_FORM_LISTS = ['shift_types', 'licences', 'availability'];
+
+const fullFormUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024, files: 10, fields: 200 },
+  fileFilter: (req, file, cb) => {
+    const spec = FULL_FORM_FILES[file.fieldname];
+    if (!spec) return cb(new Error('Unexpected file field.'));
+    if (!spec.types.includes(file.mimetype)) {
+      return cb(new Error(spec.types === PDF_TYPES
+        ? `${spec.label} must be a PDF file.`
+        : `${spec.label}: that file type isn't accepted.`));
+    }
+    cb(null, true);
+  }
+}).fields(Object.entries(FULL_FORM_FILES).map(([name, spec]) => ({ name, maxCount: spec.max })));
+
+function handleFullFormUpload(req, res, next) {
+  fullFormUpload(req, res, (err) => {
+    if (err) {
+      const msg = err.code === 'LIMIT_FILE_SIZE' ? 'Each file must be 10 MB or smaller.' : (err.message || 'Could not upload those files.');
+      return res.status(400).json({ error: msg });
+    }
+    next();
+  });
+}
+
+async function findCandidateByToken(token) {
+  if (!token || typeof token !== 'string' || token.length < 32) return null;
+  const { rows } = await pool.query(
+    `SELECT id, name, email, phone, sector, position FROM candidates
+     WHERE full_form_token = $1 AND full_form_submitted_at IS NULL`, [token]
+  );
+  return rows[0] || null;
+}
+
+// public: details used to prefill the full form
+app.get('/api/full-application/:token', async (req, res, next) => {
+  try {
+    const c = await findCandidateByToken(req.params.token);
+    if (!c) return res.status(404).json({ error: 'This link is invalid, has expired, or has already been used.' });
+    const [first, ...rest] = (c.name || '').trim().split(/\s+/);
+    res.json({ first_name: first || '', last_name: rest.join(' '), email: c.email, phone: c.phone, position: c.position });
+  } catch (err) { next(err); }
+});
+
+// public: submit the full form
+app.post('/api/full-application/:token', handleFullFormUpload, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const c = await findCandidateByToken(req.params.token);
+    if (!c) return res.status(404).json({ error: 'This link is invalid, has expired, or has already been used.' });
+
+    const body = req.body || {};
+    const data = {};
+    FULL_FORM_FIELDS.forEach(f => {
+      const v = body[f];
+      if (typeof v === 'string' && v.trim()) data[f] = v.trim().slice(0, 5000);
+    });
+    FULL_FORM_LISTS.forEach(f => {
+      let v = body[f] ?? body[f + '[]'];
+      if (v === undefined) return;
+      if (!Array.isArray(v)) v = [v];
+      data[f] = v.filter(x => typeof x === 'string').map(x => x.slice(0, 200));
+    });
+
+    const missing = ['first_name', 'last_name', 'address', 'suburb', 'state', 'postcode', 'phone', 'email',
+      'position', 'employment_type', 'work_rights', 'injury_affecting_role', 'declaration',
+      'privacy_recruitment_consent', 'privacy_sharing_consent', 'applicant_full_name', 'submission_date']
+      .filter(f => !data[f]);
+    if (missing.length) return res.status(400).json({ error: 'Please complete all required fields.', missing });
+    if (data.injury_affecting_role === 'Yes' && !data.injury_details) {
+      return res.status(400).json({ error: 'Please give details of the injury or any adjustments needed.' });
+    }
+
+    const files = req.files || {};
+    const needed = ['id_passport_or_birth_certificate', 'id_driver_licence_or_photo_id'];
+    if (data.work_status === 'Temporary visa holder') needed.push('id_visa_copy');
+    const missingFiles = needed.filter(f => !files[f] || !files[f].length);
+    if (missingFiles.length) {
+      return res.status(400).json({ error: 'Please upload: ' + missingFiles.map(f => FULL_FORM_FILES[f].label).join(', ') + '.' });
+    }
+
+    // Don't trust the browser's file type: PDFs must actually start with the PDF signature.
+    for (const [field, list] of Object.entries(files)) {
+      for (const f of list) {
+        if (f.mimetype === 'application/pdf' && f.buffer.subarray(0, 5).toString('latin1') !== '%PDF-') {
+          return res.status(400).json({ error: `${FULL_FORM_FILES[field].label}: "${f.originalname}" is not a valid PDF.` });
+        }
+      }
+    }
+
+    await client.query('BEGIN');
+    for (const [field, list] of Object.entries(files)) {
+      for (const f of list) {
+        await client.query(
+          `INSERT INTO candidate_documents (candidate_id, kind, filename, mimetype, size_bytes, data)
+           VALUES ($1,$2,$3,$4,$5,$6)`,
+          [c.id, field, f.originalname.slice(0, 255), f.mimetype, f.size, f.buffer]
+        );
+      }
+    }
+    await client.query(
+      `UPDATE candidates
+       SET full_form_data = $1, full_form_submitted_at = now(), full_form_token = NULL, updated_at = now()
+       WHERE id = $2`,
+      [data, c.id]
+    );
+    await client.query('COMMIT');
+    res.json({ ok: true });
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('full application error', err);
+    res.status(500).json({ error: 'Something went wrong submitting your application. Please try again.' });
+  } finally {
+    client.release();
+  }
+});
+
 // employers: submit a staffing request from the "Hire Staff" tab
 app.post('/api/employer-requests', async (req, res) => {
   try {
@@ -279,7 +437,8 @@ const EMPLOYER_STATUSES = ['new', 'contacted', 'closed'];
 app.get('/api/candidates', requireAuth, async (req, res) => {
   const { rows } = await pool.query(
     `SELECT id, name, email, phone, sector, position, posting_id, cover_letter, stage, notes,
-            resume_filename, created_at, updated_at
+            resume_filename, created_at, updated_at,
+            full_form_sent_at, full_form_submitted_at, (full_form_token IS NOT NULL) AS full_form_link_active
      FROM candidates ORDER BY created_at DESC`
   );
   res.json({ candidates: rows });
@@ -368,6 +527,72 @@ app.patch('/api/candidates/:id', requireAuth, async (req, res) => {
   values.push(id);
   await pool.query(`UPDATE candidates SET ${fields.join(', ')} WHERE id = $${i}`, values);
   res.json({ ok: true });
+});
+
+// full employee application: create (or replace) the private link. Only for hired candidates.
+app.post('/api/candidates/:id/full-form-link', requireAuth, async (req, res, next) => {
+  try {
+    const { rows } = await pool.query('SELECT id, stage, full_form_submitted_at FROM candidates WHERE id = $1', [req.params.id]);
+    const c = rows[0];
+    if (!c) return res.status(404).json({ error: 'Candidate not found.' });
+    if (c.stage !== 'hired') {
+      return res.status(400).json({ error: 'The employee application is only for hired candidates. Move this candidate to Hired first.' });
+    }
+    if (c.full_form_submitted_at) {
+      return res.status(400).json({ error: 'This candidate has already submitted their employee application.' });
+    }
+    const token = crypto.randomBytes(32).toString('hex');
+    await pool.query(
+      'UPDATE candidates SET full_form_token = $1, full_form_sent_at = now(), updated_at = now() WHERE id = $2',
+      [token, c.id]
+    );
+    res.json({ ok: true, url: `${publicBaseUrl(req)}/full-application?token=${token}` });
+  } catch (err) { next(err); }
+});
+
+// full employee application: answers + list of uploaded documents (no file contents)
+app.get('/api/candidates/:id/full-form', requireAuth, async (req, res, next) => {
+  try {
+    const { rows } = await pool.query(
+      'SELECT full_form_data, full_form_sent_at, full_form_submitted_at FROM candidates WHERE id = $1', [req.params.id]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Candidate not found.' });
+    const docs = await pool.query(
+      `SELECT id, kind, filename, mimetype, size_bytes, created_at FROM candidate_documents
+       WHERE candidate_id = $1 ORDER BY id`, [req.params.id]
+    );
+    res.json({
+      data: rows[0].full_form_data,
+      sent_at: rows[0].full_form_sent_at,
+      submitted_at: rows[0].full_form_submitted_at,
+      documents: docs.rows.map(d => ({ ...d, label: (FULL_FORM_FILES[d.kind] || {}).label || d.kind, is_id: !!(FULL_FORM_FILES[d.kind] || {}).id }))
+    });
+  } catch (err) { next(err); }
+});
+
+// download one uploaded document
+app.get('/api/documents/:docId', requireAuth, async (req, res, next) => {
+  try {
+    const { rows } = await pool.query('SELECT filename, mimetype, data FROM candidate_documents WHERE id = $1', [req.params.docId]);
+    const d = rows[0];
+    if (!d) return res.status(404).send('Document not found.');
+    res.setHeader('Content-Type', d.mimetype || 'application/octet-stream');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.setHeader('Content-Disposition', `inline; filename="${(d.filename || 'document').replace(/["\r\n]/g, '')}"`);
+    res.send(d.data);
+  } catch (err) { next(err); }
+});
+
+// delete a candidate's identity documents once they've been verified
+app.delete('/api/candidates/:id/id-documents', requireAuth, async (req, res, next) => {
+  try {
+    const idKinds = Object.entries(FULL_FORM_FILES).filter(([, s]) => s.id).map(([k]) => k);
+    const result = await pool.query(
+      'DELETE FROM candidate_documents WHERE candidate_id = $1 AND kind = ANY($2)', [req.params.id, idKinds]
+    );
+    res.json({ ok: true, deleted: result.rowCount });
+  } catch (err) { next(err); }
 });
 
 app.get('/api/candidates/:id/resume', requireAuth, async (req, res) => {

@@ -80,3 +80,17 @@ for the people who need it.
 Open postings are exposed read-only at `/api/public/jobs` (and
 `/api/public/jobs/:id`) so the kytez.com.au site can list them, with each job's
 Apply button linking back to the ATS apply page. See `PUBLIC_API.md`.
+
+## Employee application (hired candidates only)
+
+Once a candidate is moved to **Hired**, open them in the dashboard and use
+**Employee application → Create link**. Send that private link to the candidate
+by email or SMS. It opens the full Kytez employee application form (personal
+details, work rights, history, licences, references, and PDF uploads of their
+passport or birth certificate, visa, photo ID and Medicare/other ID).
+
+- Each link works once; creating a new link disables the old one.
+- Answers and documents appear in the same candidate popup. Documents can only
+  be opened by signed-in staff.
+- After verifying a candidate's identity, use **Delete ID documents** so
+  passports and licences aren't kept longer than needed.

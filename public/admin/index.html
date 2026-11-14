@@ -73,6 +73,15 @@
   .card-item .cdate { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
   .empty-col { font-size: 11.5px; color: var(--text-muted); text-align: center; padding: 20px 0; }
 
+  /* ---- employee application ---- */
+  .ff-box { border: 1px solid var(--border); border-radius: 10px; padding: 12px; background: #fff; color: var(--text-primary); font-size: 13px; }
+  .ff-box .btn { padding: 8px 12px; font-size: 13px; }
+  .ff-link { display: flex; gap: 8px; margin-top: 8px; }
+  .ff-link input { font-size: 12px; }
+  .ff-section { margin-top: 12px; }
+  .ff-section h4 { margin: 0 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); }
+  .ff-docs a { display: block; padding: 4px 0; }
+  .ff-danger { background: #fbeaea; color: var(--status-critical); border: 1px solid rgba(208,59,59,.3); }
   /* ---- modal ---- */
   .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 100; }
   .modal { background: var(--surface-1); border-radius: 16px; padding: 28px; max-width: 480px; width: 100%; max-height: 88vh; overflow-y: auto; }
@@ -221,7 +230,7 @@
 
 <!-- MODAL -->
 <div class="modal-backdrop hidden" id="modalBackdrop">
-  <div class="modal">
+  <div class="modal" style="max-width:600px">
     <h2 id="mName"></h2>
     <div class="sub" id="mRole"></div>
     <div class="row"><span class="k">Email</span><span id="mEmail"></span></div>
@@ -239,6 +248,7 @@
       </select>
     </div>
     <div class="field"><label>Cover note</label><div class="sub" id="mCover" style="white-space:pre-wrap"></div></div>
+    <div class="field" id="mFullForm"><label>Employee application</label><div id="mFullFormBody" class="sub"></div></div>
     <div class="field"><label>Internal notes</label><textarea id="mNotes" placeholder="Add private notes about this candidate..."></textarea></div>
     <div class="modal-actions">
       <button class="btn btn-secondary" id="mClose">Close</button>
@@ -352,7 +362,76 @@ function openModal(id) {
   document.getElementById('mStage').value = c.stage;
   document.getElementById('mCover').textContent = c.cover_letter || '—';
   document.getElementById('mNotes').value = c.notes || '';
+  renderFullForm(c);
   document.getElementById('modalBackdrop').classList.remove('hidden');
+}
+
+// ---------- employee application (hired candidates only) ----------
+const FF_GROUPS = [
+  ['Personal details', ['first_name','last_name','preferred_name','date_of_birth','address','suburb','state','postcode','phone','email','preferred_contact']],
+  ['Position', ['position','job_reference','employment_type','preferred_location','available_start_date','expected_pay','shift_types']],
+  ['Work rights', ['work_rights','work_status','visa_subclass','visa_expiry','visa_conditions']],
+  ['Qualifications', ['education','qualification','institution','year_completed','industry_experience','skills_experience']],
+  ['Employment history', ['most_recent_employer','most_recent_position','most_recent_dates','reason_for_leaving','duties_responsibilities','previous_employer','previous_position','previous_dates','previous_reason_for_leaving','previous_duties']],
+  ['Licences', ['licences','other_licence_details','licence_expiry']],
+  ['Availability', ['availability','preferred_hours','short_notice']],
+  ['Injury', ['injury_affecting_role','injury_details']],
+  ['Employment services', ['workforce_australia','employment_provider','employment_support','employment_support_details','provider_contact_consent']],
+  ['References', ['referee1_name','referee1_company_position','referee1_relationship','referee1_phone','referee1_email','referee2_name','referee2_company_position','referee2_relationship','referee2_phone','referee2_email','reference_consent']],
+  ['Declaration', ['declaration','privacy_recruitment_consent','privacy_sharing_consent','future_contact_consent','applicant_full_name','submission_date']]
+];
+const ffLabel = k => k.replace(/_/g, ' ').replace(/^./, m => m.toUpperCase());
+
+async function renderFullForm(c) {
+  const body = document.getElementById('mFullFormBody');
+  if (c.stage !== 'hired') {
+    body.innerHTML = '<div class="ff-box">Available once this candidate is moved to <b>Hired</b> and saved.</div>';
+    return;
+  }
+  if (!c.full_form_submitted_at) {
+    const sent = c.full_form_sent_at ? `Link sent ${new Date(c.full_form_sent_at).toLocaleDateString()}. Not submitted yet.` : 'Not sent yet.';
+    body.innerHTML = `<div class="ff-box">${sent}
+      <div style="margin-top:8px"><button class="btn btn-secondary" id="ffMakeLink">${c.full_form_sent_at ? 'Create a new link' : 'Create link'}</button></div>
+      <div id="ffLinkOut"></div>
+      ${c.full_form_sent_at ? '<div class="sub" style="margin:6px 0 0">Creating a new link stops the old one working.</div>' : ''}</div>`;
+    document.getElementById('ffMakeLink').addEventListener('click', async () => {
+      const res = await fetch('/api/candidates/' + c.id + '/full-form-link', { method: 'POST' });
+      const data = await res.json();
+      const out = document.getElementById('ffLinkOut');
+      if (!res.ok) { out.innerHTML = `<div class="err" style="display:block;margin:8px 0 0">${escapeHtml(data.error)}</div>`; return; }
+      c.full_form_sent_at = new Date().toISOString();
+      out.innerHTML = `<div class="ff-link"><input readonly value="${escapeHtml(data.url)}"><button class="btn btn-secondary" id="ffCopy">Copy</button></div>
+        <div class="sub" style="margin:6px 0 0">Send this link to ${escapeHtml(c.name)} by email or SMS. It works once.</div>`;
+      document.getElementById('ffCopy').addEventListener('click', () => {
+        navigator.clipboard.writeText(data.url).then(() => { document.getElementById('ffCopy').textContent = 'Copied'; });
+      });
+    });
+    return;
+  }
+  body.innerHTML = '<div class="ff-box">Loading…</div>';
+  const res = await fetch('/api/candidates/' + c.id + '/full-form');
+  const ff = await res.json();
+  const d = ff.data || {};
+  const val = v => Array.isArray(v) ? v.join(', ') : v;
+  const groups = FF_GROUPS.map(([title, keys]) => {
+    const rows = keys.filter(k => d[k] && (!Array.isArray(d[k]) || d[k].length))
+      .map(k => `<div class="row"><span class="k">${ffLabel(k)}</span><span style="text-align:right;white-space:pre-wrap;max-width:60%">${escapeHtml(String(val(d[k])))}</span></div>`).join('');
+    return rows ? `<div class="ff-section"><h4>${title}</h4>${rows}</div>` : '';
+  }).join('');
+  const idDocs = ff.documents.filter(x => x.is_id);
+  const otherDocs = ff.documents.filter(x => !x.is_id);
+  const docLink = x => `<a href="/api/documents/${x.id}" target="_blank" rel="noopener">${escapeHtml(x.label)}: ${escapeHtml(x.filename || 'file')}</a>`;
+  body.innerHTML = `<div class="ff-box">Submitted ${new Date(ff.submitted_at).toLocaleString()}
+    <div class="ff-section ff-docs"><h4>Identity documents</h4>${idDocs.length ? idDocs.map(docLink).join('') : '<span class="sub">None on file (deleted after verification, or not uploaded).</span>'}
+      ${idDocs.length ? '<button class="btn ff-danger" id="ffDeleteIds" style="margin-top:6px">Delete ID documents (after verifying)</button>' : ''}</div>
+    ${otherDocs.length ? `<div class="ff-section ff-docs"><h4>Resume and certificates</h4>${otherDocs.map(docLink).join('')}</div>` : ''}
+    ${groups}</div>`;
+  const del = document.getElementById('ffDeleteIds');
+  if (del) del.addEventListener('click', async () => {
+    if (!confirm('Permanently delete this candidate\'s identity documents? Do this once you have verified them.')) return;
+    await fetch('/api/candidates/' + c.id + '/id-documents', { method: 'DELETE' });
+    renderFullForm(c);
+  });
 }
 document.getElementById('mClose').addEventListener('click', () => document.getElementById('modalBackdrop').classList.add('hidden'));
 document.getElementById('mSave').addEventListener('click', async () => {

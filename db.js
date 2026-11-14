@@ -86,6 +86,33 @@ async function initSchema() {
     ALTER TABLE candidates ADD COLUMN IF NOT EXISTS posting_id INTEGER REFERENCES job_postings(id) ON DELETE SET NULL;
   `);
 
+  // Full Kytez employee application (step 2, sent to shortlisted candidates via a private link).
+  await pool.query(`
+    ALTER TABLE candidates
+      ADD COLUMN IF NOT EXISTS full_form_token TEXT UNIQUE,
+      ADD COLUMN IF NOT EXISTS full_form_sent_at TIMESTAMPTZ,
+      ADD COLUMN IF NOT EXISTS full_form_data JSONB,
+      ADD COLUMN IF NOT EXISTS full_form_submitted_at TIMESTAMPTZ;
+  `);
+
+  // Files uploaded through the full application: resume, certificates and identity documents.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS candidate_documents (
+      id SERIAL PRIMARY KEY,
+      candidate_id INTEGER NOT NULL REFERENCES candidates(id) ON DELETE CASCADE,
+      kind TEXT NOT NULL,
+      filename TEXT,
+      mimetype TEXT,
+      size_bytes INTEGER,
+      data BYTEA NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_candidate_documents_candidate ON candidate_documents(candidate_id);
+  `);
+
   await pool.query(`
     CREATE INDEX IF NOT EXISTS idx_candidates_stage ON candidates(stage);
   `);

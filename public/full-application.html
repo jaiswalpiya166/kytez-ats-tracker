@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Employee Application | Kytez Recruitment</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <style>
+    :root { --navy:#17365d; --teal:#007c91; --ink:#263442; --muted:#637381; --line:#d8e0e6; --bg:#f4f7f9; }
+    * { box-sizing:border-box; }
+    body { margin:0; padding:28px 14px; background:var(--bg); color:var(--ink); font:16px/1.5 Arial, sans-serif; }
+    .wrap { max-width:900px; margin:auto; }
+    .brand { text-align:center; margin-bottom:22px; }
+    .brand strong { color:var(--teal); letter-spacing:2px; font-size:14px; }
+    h1 { margin:5px 0; color:var(--navy); font-size:clamp(25px,4vw,34px); }
+    .intro { color:var(--muted); margin:0; }
+    form { background:white; border:1px solid var(--line); border-radius:14px; padding:clamp(18px,4vw,34px); box-shadow:0 8px 28px #17365d0d; }
+    fieldset { border:0; border-top:2px solid #e6eef1; padding:22px 0 8px; margin:14px 0 0; min-width:0; }
+    legend { padding:0 10px 0 0; color:var(--navy); font-weight:700; font-size:19px; }
+    .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:15px 18px; }
+    .full { grid-column:1/-1; }
+    label, .group-label { display:block; font-weight:600; font-size:14px; margin-bottom:6px; }
+    .hint { display:block; color:var(--muted); font-size:12px; font-weight:400; margin-top:3px; }
+    input, select, textarea { width:100%; border:1px solid #bcc9d2; border-radius:7px; padding:11px 12px; font:inherit; color:var(--ink); background:white; }
+    input:focus, select:focus, textarea:focus { outline:3px solid #007c9122; border-color:var(--teal); }
+    textarea { min-height:92px; resize:vertical; }
+    .choices { display:flex; flex-wrap:wrap; gap:9px 18px; }
+    .choices label { display:flex; align-items:center; gap:7px; font-weight:400; margin:0; }
+    .choices input { width:auto; }
+    .day-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }
+    .day { border:1px solid var(--line); border-radius:8px; padding:9px; }
+    .day label { margin:0; display:flex; gap:7px; align-items:center; font-weight:400; }
+    .conditional { display:none; margin-top:12px; padding:14px; background:#f5fafb; border-left:3px solid var(--teal); border-radius:5px; }
+    .conditional.show { display:block; }
+    .note { background:#f5fafb; border-radius:8px; padding:12px 14px; color:#435563; font-size:13px; }
+    .checkline { display:flex; gap:9px; align-items:flex-start; margin:10px 0; font-size:14px; }
+    .checkline input { width:auto; margin-top:4px; flex:0 0 auto; }
+    .actions { margin-top:25px; display:flex; flex-wrap:wrap; gap:12px; align-items:center; }
+    button { border:0; border-radius:8px; padding:13px 22px; background:var(--teal); color:white; font-weight:700; font-size:16px; cursor:pointer; }
+    button:hover { background:#006879; }
+    .required { color:#b42318; }
+    .small { color:var(--muted); font-size:12px; }
+    .msg-card { background:white; border:1px solid var(--line); border-radius:14px; padding:32px; text-align:center; }
+    .msg-card h2 { color:var(--navy); margin:0 0 8px; }
+    .form-error { display:none; margin-top:16px; background:#fdecea; color:#b42318; border-radius:8px; padding:12px 14px; font-size:14px; }
+    button:disabled { opacity:.6; cursor:wait; }
+    @media(max-width:650px) { .grid { grid-template-columns:1fr; } .day-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header class="brand">
+    <strong>KYTEZ RECRUITMENT</strong>
+    <h1>Employee Application Form</h1>
+    <p class="intro">Congratulations on your new role. Please complete your employee details below.</p>
+  </header>
+
+  <!-- IMPORTANT: Connect this form to your website's secure form handler before publishing.
+       Replace the action value with your backend/API endpoint. -->
+  <form id="kytezApplication" method="post" action="/REPLACE-WITH-SECURE-FORM-ENDPOINT" enctype="multipart/form-data">
+    <p class="small"><span class="required">*</span> Required fields</p>
+
+    <fieldset>
+      <legend>1. Personal details</legend>
+      <div class="grid">
+        <div><label for="firstName">First name <span class="required">*</span></label><input id="firstName" name="first_name" autocomplete="given-name" required></div>
+        <div><label for="lastName">Last name <span class="required">*</span></label><input id="lastName" name="last_name" autocomplete="family-name" required></div>
+        <div><label for="preferredName">Preferred name</label><input id="preferredName" name="preferred_name"></div>
+        <div><label for="dob">Date of birth <span class="hint">Only request if necessary for a lawful role-related purpose.</span></label><input id="dob" name="date_of_birth" type="date"></div>
+        <div class="full"><label for="address">Residential address <span class="required">*</span></label><input id="address" name="address" autocomplete="street-address" required></div>
+        <div><label for="suburb">Suburb <span class="required">*</span></label><input id="suburb" name="suburb" required></div>
+          <div><label for="state">State <span class="required">*</span></label><select id="state" name="state" required><option value="">Select</option><option>ACT</option><option>NSW</option><option>NT</option><option>QLD</option><option>SA</option><option>TAS</option><option>VIC</option><option>WA</option></select></div>
+          <div><label for="postcode">Postcode <span class="required">*</span></label><input id="postcode" name="postcode" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" required></div>
+        <div><label for="phone">Mobile number <span class="required">*</span></label><input id="phone" name="phone" type="tel" autocomplete="tel" required></div>
+        <div><label for="email">Email address <span class="required">*</span></label><input id="email" name="email" type="email" autocomplete="email" required></div>
+        <div><label for="contactMethod">Preferred contact method</label><select id="contactMethod" name="preferred_contact"><option>Email</option><option>Phone</option><option>SMS</option></select></div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>2. Position and employment preferences</legend>
+      <div class="grid">
+        <div><label for="position">Position applying for <span class="required">*</span></label><input id="position" name="position" required></div>
+        <div><label for="jobRef">Job reference number</label><input id="jobRef" name="job_reference"></div>
+        <div><label for="employmentType">Preferred employment type <span class="required">*</span></label><select id="employmentType" name="employment_type" required><option value="">Select</option><option>Full-time</option><option>Part-time</option><option>Casual</option><option>Fixed-term</option><option>Temporary / Labour hire</option></select></div>
+        <div><label for="location">Preferred work location</label><input id="location" name="preferred_location"></div>
+        <div><label for="startDate">Available commencement date</label><input id="startDate" name="available_start_date" type="date"></div>
+        <div><label for="pay">Expected hourly rate or salary (optional)</label><input id="pay" name="expected_pay"></div>
+        <div class="full"><span class="group-label">Willing to work</span><div class="choices">
+          <label><input type="checkbox" name="shift_types[]" value="Weekdays"> Weekdays</label>
+          <label><input type="checkbox" name="shift_types[]" value="Weekends"> Weekends</label>
+          <label><input type="checkbox" name="shift_types[]" value="Public holidays"> Public holidays</label>
+          <label><input type="checkbox" name="shift_types[]" value="Morning"> Morning shifts</label>
+          <label><input type="checkbox" name="shift_types[]" value="Afternoon"> Afternoon shifts</label>
+          <label><input type="checkbox" name="shift_types[]" value="Night"> Night shifts</label>
+          <label><input type="checkbox" name="shift_types[]" value="Overtime"> Overtime</label>
+          <label><input type="checkbox" name="shift_types[]" value="Rotating"> Rotating shifts</label>
+        </div></div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>3. Australian work rights</legend>
+      <div class="grid">
+        <div><label for="workRights">Are you legally entitled to work in Australia? <span class="required">*</span></label><select id="workRights" name="work_rights" required><option value="">Select</option><option>Yes</option><option>No</option><option>Unsure</option></select></div>
+        <div><label for="status">Current work-rights status</label><select id="status" name="work_status"><option value="">Select</option><option>Australian citizen</option><option>Australian permanent resident</option><option>New Zealand citizen</option><option>Temporary visa holder</option><option>Other</option></select></div>
+        <div><label for="visaSubclass">Visa subclass (if applicable)</label><input id="visaSubclass" name="visa_subclass"></div>
+        <div><label for="visaExpiry">Visa expiry date (if applicable)</label><input id="visaExpiry" name="visa_expiry" type="date"></div>
+        <div class="full"><label for="visaConditions">Work restrictions or conditions (if applicable)</label><textarea id="visaConditions" name="visa_conditions"></textarea></div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>4. Qualifications and experience</legend>
+      <div class="grid">
+        <div><label for="education">Highest education level</label><select id="education" name="education"><option value="">Select</option><option>Year 10</option><option>Year 12</option><option>Certificate III</option><option>Certificate IV</option><option>Diploma</option><option>Advanced Diploma</option><option>Bachelor degree</option><option>Postgraduate qualification</option><option>Other</option></select></div>
+        <div><label for="qualification">Qualification / course name</label><input id="qualification" name="qualification"></div>
+        <div><label for="institution">Institution</label><input id="institution" name="institution"></div>
+        <div><label for="yearCompleted">Year completed</label><input id="yearCompleted" name="year_completed" inputmode="numeric" pattern="[0-9]{4}"></div>
+        <div><label for="experience">Industry experience</label><select id="experience" name="industry_experience"><option value="">Select</option><option>No experience</option><option>Less than 1 year</option><option>1–2 years</option><option>3–5 years</option><option>5–10 years</option><option>More than 10 years</option></select></div>
+        <div class="full"><label for="skills">Relevant skills, experience and registrations</label><textarea id="skills" name="skills_experience"></textarea></div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>5. Employment history</legend>
+      <div class="grid">
+        <div><label for="employer1">Most recent employer</label><input id="employer1" name="most_recent_employer"></div>
+        <div><label for="role1">Position held</label><input id="role1" name="most_recent_position"></div>
+        <div><label for="dates1">Employment dates</label><input id="dates1" name="most_recent_dates" placeholder="e.g. Jan 2022 – Aug 2025"></div>
+        <div><label for="reason1">Reason for leaving</label><input id="reason1" name="reason_for_leaving"></div>
+        <div class="full"><label for="duties1">Key duties and responsibilities</label><textarea id="duties1" name="duties_responsibilities"></textarea></div>
+        <div><label for="employer2">Previous employer</label><input id="employer2" name="previous_employer"></div>
+        <div><label for="role2">Position held</label><input id="role2" name="previous_position"></div>
+        <div><label for="dates2">Employment dates</label><input id="dates2" name="previous_dates"></div>
+        <div><label for="reason2">Reason for leaving</label><input id="reason2" name="previous_reason_for_leaving"></div>
+        <div class="full"><label for="duties2">Key duties and responsibilities</label><textarea id="duties2" name="previous_duties"></textarea></div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>6. Licences and certifications</legend>
+      <div class="choices">
+        <label><input type="checkbox" name="licences[]" value="Driver licence"> Australian driver licence</label>
+        <label><input type="checkbox" name="licences[]" value="Forklift"> Forklift licence</label>
+        <label><input type="checkbox" name="licences[]" value="White Card"> White Card</label>
+        <label><input type="checkbox" name="licences[]" value="First Aid"> First Aid</label>
+        <label><input type="checkbox" name="licences[]" value="CPR"> CPR</label>
+        <label><input type="checkbox" name="licences[]" value="Working with Children Check"> Working with Children Check</label>
+        <label><input type="checkbox" name="licences[]" value="Blue Card"> Queensland Blue Card</label>
+        <label><input type="checkbox" name="licences[]" value="Police Check"> National Police Check</label>
+        <label><input type="checkbox" name="licences[]" value="RSA"> RSA</label>
+        <label><input type="checkbox" name="licences[]" value="RSG"> RSG</label>
+        <label><input type="checkbox" name="licences[]" value="High Risk Work Licence"> High Risk Work Licence</label>
+      </div>
+      <div class="grid" style="margin-top:14px">
+        <div><label for="licenceDetails">Other licences / certificate details</label><input id="licenceDetails" name="other_licence_details"></div>
+        <div><label for="licenceExpiry">Relevant expiry date(s)</label><input id="licenceExpiry" name="licence_expiry" type="date"></div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>7. Availability</legend>
+      <span class="group-label">Select the days you are generally available</span>
+      <div class="day-grid">
+        <div class="day"><label><input type="checkbox" name="availability[]" value="Monday"> Monday</label></div>
+        <div class="day"><label><input type="checkbox" name="availability[]" value="Tuesday"> Tuesday</label></div>
+        <div class="day"><label><input type="checkbox" name="availability[]" value="Wednesday"> Wednesday</label></div>
+        <div class="day"><label><input type="checkbox" name="availability[]" value="Thursday"> Thursday</label></div>
+        <div class="day"><label><input type="checkbox" name="availability[]" value="Friday"> Friday</label></div>
+        <div class="day"><label><input type="checkbox" name="availability[]" value="Saturday"> Saturday</label></div>
+        <div class="day"><label><input type="checkbox" name="availability[]" value="Sunday"> Sunday</label></div>
+      </div>
+      <div class="grid" style="margin-top:14px">
+        <div><label for="hours">Preferred working hours</label><input id="hours" name="preferred_hours"></div>
+        <div><label for="shortNotice">Available for short-notice shifts?</label><select id="shortNotice" name="short_notice"><option value="">Select</option><option>Yes</option><option>No</option></select></div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>8. Previous or current injury</legend>
+      <label for="injury">Have you had any previous or current injury that may affect your ability to safely perform the requirements of this position?</label>
+      <select id="injury" name="injury_affecting_role" required><option value="">Select</option><option value="No">No</option><option value="Yes">Yes</option></select>
+      <div id="injuryDetailsWrap" class="conditional">
+        <label for="injuryDetails">If yes, please provide relevant details, including any work restrictions or adjustments required.</label>
+        <textarea id="injuryDetails" name="injury_details" aria-describedby="injuryHint"></textarea>
+        <span id="injuryHint" class="hint">Please provide only information relevant to the requirements of this role. You do not need to provide a diagnosis or detailed medical history.</span>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>9. Workforce Australia / employment services</legend>
+      <div class="grid">
+        <div><label for="workforce">Are you currently registered with Workforce Australia or receiving support from an employment services provider?</label><select id="workforce" name="workforce_australia"><option value="">Select</option><option>Yes</option><option>No</option><option>Unsure</option></select></div>
+        <div id="providerWrap" class="conditional"><label for="provider">Provider or agency name</label><input id="provider" name="employment_provider"></div>
+        <div class="full"><label for="support">Do you have a referral, wage subsidy or other employment support arrangement relevant to this application?</label><select id="support" name="employment_support"><option value="">Select</option><option>Yes</option><option>No</option><option>Unsure</option></select></div>
+        <div class="full"><label for="supportDetails">Further details (optional)</label><textarea id="supportDetails" name="employment_support_details"></textarea></div>
+      </div>
+      <label class="checkline"><input type="checkbox" name="provider_contact_consent" value="Yes"> I give permission for Kytez Recruitment to contact my employment services provider about this application, if required.</label>
+    </fieldset>
+
+    <fieldset>
+      <legend>10. Professional references</legend>
+      <div class="grid">
+        <div><label for="ref1Name">Referee 1 – full name</label><input id="ref1Name" name="referee1_name"></div>
+        <div><label for="ref1Company">Company and position</label><input id="ref1Company" name="referee1_company_position"></div>
+        <div><label for="ref1Relationship">Relationship to you</label><input id="ref1Relationship" name="referee1_relationship"></div>
+        <div><label for="ref1Phone">Contact number</label><input id="ref1Phone" name="referee1_phone" type="tel"></div>
+        <div class="full"><label for="ref1Email">Email</label><input id="ref1Email" name="referee1_email" type="email"></div>
+        <div><label for="ref2Name">Referee 2 – full name</label><input id="ref2Name" name="referee2_name"></div>
+        <div><label for="ref2Company">Company and position</label><input id="ref2Company" name="referee2_company_position"></div>
+        <div><label for="ref2Relationship">Relationship to you</label><input id="ref2Relationship" name="referee2_relationship"></div>
+        <div><label for="ref2Phone">Contact number</label><input id="ref2Phone" name="referee2_phone" type="tel"></div>
+        <div class="full"><label for="ref2Email">Email</label><input id="ref2Email" name="referee2_email" type="email"></div>
+      </div>
+      <label class="checkline"><input type="checkbox" name="reference_consent" value="Yes"> I authorise Kytez Recruitment to contact the referees listed above for employment-related reference checks.</label>
+    </fieldset>
+
+    <fieldset>
+      <legend>11. Resume and supporting documents</legend>
+      <div class="grid">
+        <div class="full"><label for="resume">Upload your resume (PDF, DOC or DOCX)</label><input id="resume" name="resume" type="file" accept=".pdf,.doc,.docx"></div>
+        <div class="full"><label for="documents">Upload relevant certificates or licences (optional)</label><input id="documents" name="supporting_documents" type="file" accept=".pdf,.jpg,.jpeg,.png" multiple></div>
+      </div>
+      <p class="hint">Only upload documents relevant to the position. Identity documents go in the next section.</p>
+    </fieldset>
+
+    <fieldset>
+      <legend>12. Identity and work-rights documents</legend>
+      <p class="note">Please upload a clear scan or photo of each document, saved as a PDF (max 10 MB each). Make sure all details are readable and nothing is cut off.</p>
+      <div class="grid">
+        <div class="full"><label for="idPrimary">1. Passport or Australian birth certificate <span class="required">*</span> <span class="hint">PDF only</span></label><input id="idPrimary" name="id_passport_or_birth_certificate" type="file" accept=".pdf,application/pdf" required></div>
+        <div class="full"><label for="idVisa">2. Visa copy <span class="hint">Required if you hold a visa. PDF only.</span></label><input id="idVisa" name="id_visa_copy" type="file" accept=".pdf,application/pdf"></div>
+        <div class="full"><label for="idPhoto">3. Driver licence or photo ID <span class="required">*</span> <span class="hint">PDF only. Include front and back if applicable.</span></label><input id="idPhoto" name="id_driver_licence_or_photo_id" type="file" accept=".pdf,application/pdf" required></div>
+        <div class="full"><label for="idOther">4. Medicare card or any other ID <span class="hint">Optional. PDF only.</span></label><input id="idOther" name="id_medicare_or_other" type="file" accept=".pdf,application/pdf"></div>
+      </div>
+      <p class="hint">Your identity documents are used only to verify your identity and right to work in Australia, and are handled in line with Kytez Recruitment's privacy policy.</p>
+    </fieldset>
+
+    <fieldset>
+      <legend>13. Declaration and privacy consent</legend>
+      <p class="note">I declare that the information I have provided is true and complete to the best of my knowledge. I understand that providing false or misleading information may affect my application. I understand that submitting this form does not guarantee an interview, job offer or employment.</p>
+      <label class="checkline"><input type="checkbox" name="declaration" value="Agreed" required> I confirm that the information provided is true and correct. <span class="required">*</span></label>
+      <p class="note">Kytez Recruitment collects personal information to assess applications, contact applicants, verify relevant qualifications and references, and facilitate recruitment and placement. Information may be shared with prospective employers or clients where relevant and authorised. Personal information will be handled in accordance with applicable Australian privacy laws and Kytez Recruitment's privacy policy.</p>
+      <label class="checkline"><input type="checkbox" name="privacy_recruitment_consent" value="Agreed" required> I consent to Kytez Recruitment collecting and using my personal information for recruitment purposes. <span class="required">*</span></label>
+      <label class="checkline"><input type="checkbox" name="privacy_sharing_consent" value="Agreed" required> I consent to relevant application information being shared with prospective employers or clients for suitable employment opportunities. <span class="required">*</span></label>
+      <label class="checkline"><input type="checkbox" name="future_contact_consent" value="Yes"> I agree to being contacted about future employment opportunities (optional).</label>
+      <div class="grid">
+        <div><label for="applicantSignature">Applicant full name <span class="required">*</span></label><input id="applicantSignature" name="applicant_full_name" required></div>
+        <div><label for="submissionDate">Date <span class="required">*</span></label><input id="submissionDate" name="submission_date" type="date" required></div>
+      </div>
+    </fieldset>
+
+    <div class="actions">
+      <button type="submit" id="submitBtn">Submit application</button>
+      <span class="small">Your application is not submitted until you see a confirmation message.</span>
+    </div>
+    <div id="formError" class="form-error" role="alert"></div>
+  </form>
+</div>
+<script>
+  const injury = document.getElementById('injury');
+  const injuryWrap = document.getElementById('injuryDetailsWrap');
+  const injuryDetails = document.getElementById('injuryDetails');
+  injury.addEventListener('change', () => {
+    const show = injury.value === 'Yes';
+    injuryWrap.classList.toggle('show', show);
+    injuryDetails.required = show;
+    if (!show) injuryDetails.value = '';
+  });
+
+  const workforce = document.getElementById('workforce');
+  const providerWrap = document.getElementById('providerWrap');
+  const provider = document.getElementById('provider');
+  workforce.addEventListener('change', () => {
+    const show = workforce.value === 'Yes';
+    providerWrap.classList.toggle('show', show);
+    if (!show) provider.value = '';
+  });
+
+  // Visa copy becomes required for temporary visa holders.
+  const workStatus = document.getElementById('status');
+  const idVisa = document.getElementById('idVisa');
+  workStatus.addEventListener('change', () => {
+    idVisa.required = workStatus.value === 'Temporary visa holder';
+  });
+
+  // Identity uploads must be PDFs under 10 MB.
+  ['idPrimary', 'idVisa', 'idPhoto', 'idOther'].forEach(id => {
+    const input = document.getElementById(id);
+    input.addEventListener('change', () => {
+      const file = input.files[0];
+      let msg = '';
+      if (file) {
+        if (!/\.pdf$/i.test(file.name)) msg = 'Please upload a PDF file.';
+        else if (file.size > 10 * 1024 * 1024) msg = 'This file is larger than 10 MB. Please upload a smaller PDF.';
+      }
+      input.setCustomValidity(msg);
+      if (msg) input.reportValidity();
+    });
+  });
+
+  // ---------- load the private link, submit to the ATS ----------
+  const form = document.getElementById('kytezApplication');
+  const token = new URLSearchParams(location.search).get('token') || '';
+  const showLinkError = () => { document.getElementById('linkError').hidden = false; };
+
+  fetch('/api/full-application/' + encodeURIComponent(token))
+    .then(r => r.ok ? r.json() : Promise.reject())
+    .then(d => {
+      const set = (id, v) => { const el = document.getElementById(id); if (el && v && !el.value) el.value = v; };
+      set('firstName', d.first_name); set('lastName', d.last_name);
+      set('email', d.email); set('phone', d.phone); set('position', d.position);
+      form.hidden = false;
+    })
+    .catch(showLinkError);
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errEl = document.getElementById('formError');
+    errEl.style.display = 'none';
+    if (!form.reportValidity()) return;
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true; btn.textContent = 'Submitting…';
+    try {
+      const res = await fetch('/api/full-application/' + encodeURIComponent(token), { method: 'POST', body: new FormData(form) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Something went wrong. Please try again.');
+      form.hidden = true;
+      document.getElementById('doneCard').hidden = false;
+      window.scrollTo(0, 0);
+    } catch (err) {
+      errEl.textContent = err.message;
+      errEl.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'Submit application';
+    }
+  });
+
+  // Prefill today's date in the applicant date field.
+  document.getElementById('submissionDate').value = new Date().toISOString().slice(0,10);
+</script>
+</body>
+</html>
